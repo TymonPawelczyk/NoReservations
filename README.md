@@ -94,6 +94,12 @@ vercel
   - 🎬 Easter egg: "Film w kinie" → avatar mówi "Nuuuda ;)"
 - **Etap 3 (Quiz)**: Quiz wiedzy → nagrody (masaż jeśli 3+/5)
 
+### Ważne mechanizmy:
+- **Podczas wypełniania**: Możesz cofnąć się przyciskiem "← Cofnij" do poprzedniego pytania
+- **Po ukończeniu etapu**: Odpowiedzi są zablokowane - możesz tylko przeglądać wyniki
+- **Przejście dalej**: Gdy oboje klikną "Lecimy dalej", automatycznie odblokowuje się następny etap
+- **Synchronizacja**: Wszyscy widzą te same wyniki w tym samym czasie (real-time)
+
 ## 🏗️ Struktura Projektu
 
 ```
@@ -207,6 +213,10 @@ Każdy avatar ma 4 emotki do różnych sytuacji.
 - Real-time sync przez Firestore
 - 3 etapy rozgrywki z pytaniami
 - Deterministic scoring (ten sam wynik dla obu)
+- **Synchronizacja wyników** - obie osoby widzą outcome jednocześnie
+- **Blokada odpowiedzi** - po ukończeniu etapu nie można zmienić odpowiedzi
+- **Przycisk "Cofnij"** - cofanie się do poprzednich pytań podczas wypełniania
+- **Automatyczne przejście** - gdy oboje klikną "Lecimy dalej" (2/2)
 - Easter egg: "Film w kinie" w Etapie 2
 - Mini-gra w kręgle (timing bar)
 - Quiz wiedzy z nagrodami
@@ -216,7 +226,8 @@ Każdy avatar ma 4 emotki do różnych sytuacji.
 
 ## 📋 TODO dla wersji 2.0
 
-- [ ] Timer do automatycznego odblokowania etapów (obecnie tylko manual "Lecimy dalej")
+- [ ] Timer do automatycznego odblokowania etapów
+- [ ] Reset etapu dla obu użytkowników (cofnięcie wszystkich odpowiedzi)
 - [ ] Animacje przejść między pytaniami
 - [ ] Więcej pytań i etapów
 - [ ] Personalizacja nagród
