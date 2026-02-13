@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { stage1Questions } from '@/lib/questions';
 import { AnswersData } from '@/lib/session';
@@ -19,6 +19,28 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
   const [showComparison, setShowComparison] = useState(false);
   const [outcome, setOutcome] = useState<'italian' | 'hotpot' | null>(null);
   const [finishedAnswering, setFinishedAnswering] = useState(false);
+  const [hasCompletedBefore, setHasCompletedBefore] = useState(false);
+  const [agreementPercentage, setAgreementPercentage] = useState<number>(0);
+  const [resetRequested, setResetRequested] = useState(false);
+  const [partnerResetRequested, setPartnerResetRequested] = useState(false);
+
+  useEffect(() => {
+    // Check if user already completed this stage
+    const checkCompletion = async () => {
+      const answersDoc = await getDoc(doc(db, 'answers', code, 'stage1', 'data'));
+      if (answersDoc.exists()) {
+        const data = answersDoc.data() as AnswersData;
+        const userData = data[userId];
+        if (userData?.answers && Object.keys(userData.answers).length === stage1Questions.length) {
+          // User already completed - load their answers and show comparison
+          setAnswers(userData.answers as Record<string, string>);
+          setFinishedAnswering(true);
+          setHasCompletedBefore(true);
+        }
+      }
+    };
+    checkCompletion();
+  }, [code, userId]);
 
   useEffect(() => {
     // Listen to answers
@@ -36,7 +58,7 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
   }, [code, userId]);
 
   useEffect(() => {
-    // Listen to session outcome
+    // Listen to session outcome and reset requests
     const unsubscribe = onSnapshot(doc(db, 'sessions', code), (snapshot) => {
       if (snapshot.exists()) {
         const sessionData = snapshot.data();
@@ -47,11 +69,57 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
             setShowComparison(true);
           }
         }
+        
+        // Get agreement percentage
+        if (sessionData.outcomeData?.stage1Agreement !== undefined) {
+          setAgreementPercentage(sessionData.outcomeData.stage1Agreement);
+        }
+        
+        // Check reset requests
+        const resetReqs = sessionData.resetRequests?.stage1 || {};
+        const partnerIds = Object.keys(sessionData.participants || {}).filter((id: string) => id !== userId);
+        if (partnerIds.length > 0) {
+          setPartnerResetRequested(resetReqs[partnerIds[0]] || false);
+        }
+        setResetRequested(resetReqs[userId] || false);
+        
+        // If both requested reset, perform it
+        if (Object.keys(resetReqs).length === 2 && Object.values(resetReqs).every(v => v === true)) {
+          performReset();
+        }
       }
     });
 
     return () => unsubscribe();
-  }, [code, finishedAnswering]);
+  }, [code, finishedAnswering, userId]);
+
+  const requestReset = async () => {
+    await updateDoc(doc(db, 'sessions', code), {
+      [`resetRequests.stage1.${userId}`]: true,
+    });
+  };
+
+  const performReset = async () => {
+    // Clear all state
+    setAnswers({});
+    setPartnerAnswers(null);
+    setShowComparison(false);
+    setOutcome(null);
+    setFinishedAnswering(false);
+    setHasCompletedBefore(false);
+    setCurrentQ(0);
+    setAgreementPercentage(0);
+    setResetRequested(false);
+    setPartnerResetRequested(false);
+
+    // Clear Firestore data
+    await deleteDoc(doc(db, 'answers', code, 'stage1', 'data'));
+    await updateDoc(doc(db, 'sessions', code), {
+      'outcomes.stage1': deleteField(),
+      'outcomeData.stage1Agreement': deleteField(),
+      'resetRequests.stage1': deleteField(),
+    });
+  };
 
   const handleAnswer = async (questionId: string, value: string) => {
     const newAnswers = { ...answers, [questionId]: value };
@@ -89,19 +157,9 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
     }
 
     // Check if both have completed all questions
-    const bothFinished = userIds.every(uid => {
-      const userAns = allAnswers[uid].answers as Record<string, string>;
-      return Object.keys(userAns).length === stage1Questions.length;
-    });
-
-    if (!bothFinished) {
-      // Wait for both to finish all questions
-      return;
-    }
-
-    // Calculate scores
     let italianScore = 0;
     let hotpotScore = 0;
+    let matchingAnswers = 0;
 
     userIds.forEach(uid => {
       const userAns = allAnswers[uid].answers as Record<string, string>;
@@ -115,6 +173,16 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
       });
     });
 
+    // Calculate agreement percentage
+    const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
+    const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
+    stage1Questions.forEach(q => {
+      if (user1Ans[q.id] === user2Ans[q.id]) {
+        matchingAnswers++;
+      }
+    });
+    const agreement = Math.round((matchingAnswers / stage1Questions.length) * 100);
+
     // Determine outcome (with deterministic tie-break using session code)
     let result: 'italian' | 'hotpot';
     if (italianScore > hotpotScore) {
@@ -126,9 +194,10 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
       result = parseInt(code) % 2 === 0 ? 'italian' : 'hotpot';
     }
 
-    // Save outcome to session (this will trigger both users' listeners)
+    // Save outcome and agreement to session (this will trigger both users' listeners)
     await updateDoc(doc(db, 'sessions', code), {
       'outcomes.stage1': result,
+      'outcomeData.stage1Agreement': agreement,
     });
   };
 
@@ -164,19 +233,45 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
           <div className="bg-white/10 border-4 border-white/30 p-6 space-y-4">
             <h3 className="text-xl text-white font-bold text-center">Porównanie odpowiedzi</h3>
             
-            {stage1Questions.map(q => (
-              <div key={q.id} className="border-b-2 border-white/20 pb-3">
-                <p className="text-white text-sm mb-2">{q.question}</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="text-yellow-400">
-                    TY: {q.options.find(o => o.value === answers[q.id])?.label}
-                  </div>
-                  <div className="text-pink-300">
-                    PARTNER: {partnerAnswers && q.options.find(o => o.value === partnerAnswers[q.id])?.label}
+            {/* Agreement percentage */}
+            <div className={`p-3 border-4 text-center ${
+              agreementPercentage >= 75 ? 'bg-green-500/20 border-green-400' :
+              agreementPercentage >= 50 ? 'bg-yellow-500/20 border-yellow-400' :
+              'bg-red-500/20 border-red-400'
+            }`}>
+              <p className="text-white font-bold text-lg">
+                {agreementPercentage}% zgodności odpowiedzi
+              </p>
+              <p className="text-white/80 text-xs mt-1">
+                {agreementPercentage >= 75 ? '🎉 Świetna kompatybilność!' :
+                 agreementPercentage >= 50 ? '😊 Dobry początek' :
+                 '🤔 Różne gusta'}
+              </p>
+            </div>
+            
+            {stage1Questions.map(q => {
+              const myAnswer = answers[q.id];
+              const partnerAnswer = partnerAnswers?.[q.id];
+              const isMatch = myAnswer === partnerAnswer;
+              
+              return (
+                <div key={q.id} className={`border-4 p-3 ${
+                  isMatch ? 'border-green-400 bg-green-500/10' : 'border-white/20 bg-white/5'
+                }`}>
+                  <p className="text-white text-sm mb-2 flex items-center gap-2">
+                    {isMatch && '✓'} {q.question}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className={isMatch ? 'text-green-300 font-bold' : 'text-yellow-400'}>
+                      TY: {q.options.find(o => o.value === myAnswer)?.label}
+                    </div>
+                    <div className={isMatch ? 'text-green-300 font-bold' : 'text-pink-300'}>
+                      PARTNER: {partnerAnswers && q.options.find(o => o.value === partnerAnswer)?.label}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {outcome && (
               <div className="mt-6 p-4 bg-gradient-to-r from-yellow-400 to-orange-500 border-4 border-yellow-600 text-center">
@@ -186,6 +281,43 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
                 </p>
               </div>
             )}
+            
+            {/* Reset button */}
+            <div className="mt-4 space-y-2">
+              {!resetRequested && !partnerResetRequested && (
+                <button
+                  onClick={requestReset}
+                  className="retro-button w-full bg-red-600 hover:bg-red-700"
+                >
+                  🔄 Chcę spróbować ponownie
+                </button>
+              )}
+              
+              {resetRequested && !partnerResetRequested && (
+                <div className="text-center p-3 bg-yellow-500/20 border-4 border-yellow-400">
+                  <p className="text-yellow-300 text-sm">⏳ Czekam na partnera...</p>
+                  <p className="text-white/60 text-xs mt-1">Proszę partnera o kliknięcie reset</p>
+                </div>
+              )}
+              
+              {!resetRequested && partnerResetRequested && (
+                <div className="text-center p-3 bg-pink-500/20 border-4 border-pink-400">
+                  <p className="text-pink-300 text-sm">💬 Partner chce spróbować ponownie</p>
+                  <button
+                    onClick={requestReset}
+                    className="retro-button mt-2 bg-pink-600 hover:bg-pink-700"
+                  >
+                    ✓ Zgadzam się na reset
+                  </button>
+                </div>
+              )}
+              
+              {resetRequested && partnerResetRequested && (
+                <div className="text-center p-3 bg-green-500/20 border-4 border-green-400">
+                  <p className="text-green-300 text-sm">✓ Reset za chwilę...</p>
+                </div>
+              )}
+            </div>
           </div>
 
           <button onClick={onComplete} className="retro-button w-full">
@@ -222,9 +354,22 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
           </div>
         </div>
 
-        <button onClick={onComplete} className="block text-center text-pink-200 text-sm hover:text-white">
-          ← Powrót
-        </button>
+        <div className="flex gap-3">
+          {currentQ > 0 && (
+            <button 
+              onClick={() => setCurrentQ(currentQ - 1)} 
+              className="retro-button flex-1 text-sm bg-gray-400"
+            >
+              ← Cofnij
+            </button>
+          )}
+          <button 
+            onClick={onComplete} 
+            className="text-center text-pink-200 text-sm hover:text-white flex-1"
+          >
+            Powrót do mapy
+          </button>
+        </div>
       </div>
     </div>
   );

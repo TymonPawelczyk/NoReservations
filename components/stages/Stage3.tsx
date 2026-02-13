@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, getDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { stage3Questions } from '@/lib/questions';
 import { AnswersData } from '@/lib/session';
@@ -21,6 +21,28 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
   const [partnerScore, setPartnerScore] = useState(0);
   const [finishedAnswering, setFinishedAnswering] = useState(false);
   const [partnerFinished, setPartnerFinished] = useState(false);
+  const [hasCompletedBefore, setHasCompletedBefore] = useState(false);
+  const [resetRequested, setResetRequested] = useState(false);
+  const [partnerResetRequested, setPartnerResetRequested] = useState(false);
+
+  useEffect(() => {
+    // Check if user already completed this stage
+    const checkCompletion = async () => {
+      const answersSnap = await getDoc(doc(db, 'answers', code, 'stage3', 'data'));
+      if (answersSnap.exists()) {
+        const data = answersSnap.data() as AnswersData;
+        const userData = data[userId];
+        if (userData?.quizScore !== undefined && Object.keys(userData.answers || {}).length === stage3Questions.length) {
+          // User already completed - load their data and show results
+          setAnswers(userData.answers as Record<string, string>);
+          setMyScore(userData.quizScore);
+          setFinishedAnswering(true);
+          setHasCompletedBefore(true);
+        }
+      }
+    };
+    checkCompletion();
+  }, [code, userId]);
 
   useEffect(() => {
     // Listen to answers
@@ -51,6 +73,57 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
       setShowResults(true);
     }
   }, [finishedAnswering, partnerFinished]);
+
+  const requestReset = async () => {
+    await updateDoc(doc(db, 'sessions', code), {
+      [`resetRequests.stage3.${userId}`]: true,
+    });
+  };
+
+  const performReset = async () => {
+    // Clear all state
+    setAnswers({});
+    setPartnerAnswers(null);
+    setShowResults(false);
+    setMyScore(0);
+    setPartnerScore(0);
+    setFinishedAnswering(false);
+    setPartnerFinished(false);
+    setHasCompletedBefore(false);
+    setCurrentQ(0);
+    setResetRequested(false);
+    setPartnerResetRequested(false);
+
+    // Clear Firestore data
+    await deleteDoc(doc(db, 'answers', code, 'stage3', 'data'));
+    await updateDoc(doc(db, 'sessions', code), {
+      'resetRequests.stage3': deleteField(),
+    });
+  };
+
+  // Listen to reset requests
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'sessions', code), (snapshot) => {
+      if (snapshot.exists()) {
+        const sessionData = snapshot.data();
+        
+        // Check reset requests
+        const resetReqs = sessionData.resetRequests?.stage3 || {};
+        const partnerIds = Object.keys(sessionData.participants || {}).filter((id: string) => id !== userId);
+        if (partnerIds.length > 0) {
+          setPartnerResetRequested(resetReqs[partnerIds[0]] || false);
+        }
+        setResetRequested(resetReqs[userId] || false);
+        
+        // If both requested reset, perform it
+        if (Object.keys(resetReqs).length === 2 && Object.values(resetReqs).every(v => v === true)) {
+          performReset();
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [code, userId]);
 
   const handleAnswer = async (questionId: string, value: string) => {
     const newAnswers = { ...answers, [questionId]: value };
@@ -183,6 +256,43 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
                 );
               })}
             </div>
+            
+            {/* Reset button */}
+            <div className="mt-4 space-y-2">
+              {!resetRequested && !partnerResetRequested && (
+                <button
+                  onClick={requestReset}
+                  className="retro-button w-full bg-red-600 hover:bg-red-700"
+                >
+                  🔄 Chcę spróbować ponownie
+                </button>
+              )}
+              
+              {resetRequested && !partnerResetRequested && (
+                <div className="text-center p-3 bg-yellow-500/20 border-4 border-yellow-400">
+                  <p className="text-yellow-300 text-sm">⏳ Czekam na partnera...</p>
+                  <p className="text-white/60 text-xs mt-1">Proszę partnera o kliknięcie reset</p>
+                </div>
+              )}
+              
+              {!resetRequested && partnerResetRequested && (
+                <div className="text-center p-3 bg-pink-500/20 border-4 border-pink-400">
+                  <p className="text-pink-300 text-sm">💬 Partner chce spróbować ponownie</p>
+                  <button
+                    onClick={requestReset}
+                    className="retro-button mt-2 bg-pink-600 hover:bg-pink-700"
+                  >
+                    ✓ Zgadzam się na reset
+                  </button>
+                </div>
+              )}
+              
+              {resetRequested && partnerResetRequested && (
+                <div className="text-center p-3 bg-green-500/20 border-4 border-green-400">
+                  <p className="text-green-300 text-sm">✓ Reset za chwilę...</p>
+                </div>
+              )}
+            </div>
           </div>
 
           <button onClick={onComplete} className="retro-button w-full">
@@ -221,9 +331,22 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
           </div>
         </div>
 
-        <button onClick={onComplete} className="block text-center text-pink-200 text-sm hover:text-white">
-          ← Powrót
-        </button>
+        <div className="flex gap-3">
+          {currentQ > 0 && (
+            <button 
+              onClick={() => setCurrentQ(currentQ - 1)} 
+              className="retro-button flex-1 text-sm bg-gray-400"
+            >
+              ← Cofnij
+            </button>
+          )}
+          <button 
+            onClick={onComplete} 
+            className="text-center text-pink-200 text-sm hover:text-white flex-1"
+          >
+            Powrót do mapy
+          </button>
+        </div>
       </div>
     </div>
   );
