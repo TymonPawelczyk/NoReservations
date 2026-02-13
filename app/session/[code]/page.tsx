@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -19,6 +19,7 @@ export default function SessionPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStageView, setCurrentStageView] = useState<number | null>(null);
+  const advancingStageRef = useRef(false);
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('userId');
@@ -43,6 +44,55 @@ export default function SessionPage() {
 
     return () => unsubscribe();
   }, [code, router]);
+
+  // Check if both users are ready and advance to next stage
+  useEffect(() => {
+    if (!session || !userId) return;
+
+    const ready = session.ready || {};
+    const userIds = Object.keys(ready);
+
+    // Check if both users are ready (2 users, both true)
+    if (userIds.length === 2 && userIds.every(uid => ready[uid] === true)) {
+      // Prevent multiple simultaneous advances
+      if (advancingStageRef.current) return;
+      advancingStageRef.current = true;
+
+      // Both ready - advance to next stage after a short delay
+      const advanceStage = async () => {
+        const nextStage = (session.stage + 1) as 1 | 2 | 3;
+        if (nextStage > 3) {
+          advancingStageRef.current = false;
+          return; // Don't go beyond stage 3
+        }
+
+        // Small delay so users see both are ready
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        try {
+          await updateDoc(doc(db, 'sessions', code), {
+            stage: nextStage,
+            stageUnlockedAt: new Date().toISOString(),
+            // Reset ready flags for next stage
+            ready: {
+              [userIds[0]]: false,
+              [userIds[1]]: false,
+            },
+          });
+        } catch (err) {
+          console.error('Error advancing stage:', err);
+        } finally {
+          advancingStageRef.current = false;
+        }
+      };
+
+      // Advance stage
+      advanceStage();
+    } else {
+      // Reset flag when not both ready
+      advancingStageRef.current = false;
+    }
+  }, [session, userId, code]);
 
   const handleReady = async () => {
     if (!userId) return;
@@ -178,13 +228,29 @@ export default function SessionPage() {
                 PARTNER: {session.ready[Object.keys(session.ready).find(id => id !== userId) || ''] ? '✓' : '○'}
               </span>
             </div>
-            {!session.ready[userId] && (
-              <button onClick={handleReady} className="retro-button w-full">
-                Lecimy dalej!
-              </button>
+            
+            {/* Both ready - transitioning */}
+            {Object.values(session.ready).length === 2 && 
+             Object.values(session.ready).every(r => r === true) && (
+              <div className="text-center space-y-2 animate-pulse">
+                <p className="text-green-400 font-bold text-lg">🎉 2/2 Gotowe!</p>
+                <p className="text-pink-200 text-xs">Przechodzę do następnego etapu...</p>
+              </div>
             )}
-            {session.ready[userId] && (
-              <p className="text-center text-pink-200 text-xs">Czekam na partnera...</p>
+            
+            {/* Not both ready yet */}
+            {!(Object.values(session.ready).length === 2 && 
+               Object.values(session.ready).every(r => r === true)) && (
+              <>
+                {!session.ready[userId] && (
+                  <button onClick={handleReady} className="retro-button w-full">
+                    Lecimy dalej!
+                  </button>
+                )}
+                {session.ready[userId] && (
+                  <p className="text-center text-pink-200 text-xs">Czekam na partnera...</p>
+                )}
+              </>
             )}
           </div>
         )}
