@@ -44,6 +44,20 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     return () => unsubscribe();
   }, [code, userId]);
 
+  useEffect(() => {
+    // Listen to session outcome
+    const unsubscribe = onSnapshot(doc(db, 'sessions', code), (snapshot) => {
+      if (snapshot.exists()) {
+        const sessionData = snapshot.data();
+        if (sessionData.outcomes?.stage2) {
+          setFinalActivity(sessionData.outcomes.stage2);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [code]);
+
   const handleAnswer = async (questionId: string, value: string) => {
     const newAnswers = { ...answers, [questionId]: value };
     setAnswers(newAnswers);
@@ -105,8 +119,8 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   const calculateFinalActivity = async (userActivity: Activity) => {
     // For MVP, just use the first person's choice or random if different
     const result = userActivity;
-    setFinalActivity(result);
 
+    // Save outcome to session (this will trigger both users' listeners)
     await updateDoc(doc(db, 'sessions', code), {
       'outcomes.stage2': result,
     });
