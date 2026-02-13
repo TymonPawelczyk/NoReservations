@@ -19,6 +19,8 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
   const [showResults, setShowResults] = useState(false);
   const [myScore, setMyScore] = useState(0);
   const [partnerScore, setPartnerScore] = useState(0);
+  const [finishedAnswering, setFinishedAnswering] = useState(false);
+  const [partnerFinished, setPartnerFinished] = useState(false);
 
   useEffect(() => {
     // Listen to answers
@@ -30,12 +32,25 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
           const partnerData = data[partnerIds[0]];
           setPartnerAnswers(partnerData.answers as Record<string, string>);
           setPartnerScore(partnerData.quizScore || 0);
+          
+          // Check if partner finished (has all answers)
+          const partnerAnswerCount = Object.keys(partnerData.answers || {}).length;
+          if (partnerAnswerCount >= stage3Questions.length && partnerData.quizScore !== undefined) {
+            setPartnerFinished(true);
+          }
         }
       }
     });
 
     return () => unsubscribe();
   }, [code, userId]);
+
+  // Auto-show results when both finished
+  useEffect(() => {
+    if (finishedAnswering && partnerFinished) {
+      setShowResults(true);
+    }
+  }, [finishedAnswering, partnerFinished]);
 
   const handleAnswer = async (questionId: string, value: string) => {
     const newAnswers = { ...answers, [questionId]: value };
@@ -55,7 +70,7 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
         },
       }, { merge: true });
 
-      setShowResults(true);
+      setFinishedAnswering(true);
     }
   };
 
@@ -70,6 +85,30 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
     });
     return correct;
   };
+
+  // Waiting screen (when finished but partner hasn't)
+  if (finishedAnswering && !showResults) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="max-w-md w-full space-y-6 text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <h2 className="text-2xl font-bold text-white">Czekam na partnera...</h2>
+          <p className="text-pink-200 text-sm">
+            Skończyłeś/aś quiz! Czekaj aż partner odpowie.
+          </p>
+          <div className="bg-white/10 border-4 border-white/30 p-4">
+            <p className="text-white text-sm">Twój wynik: {myScore}/5</p>
+            <p className="text-white/70 text-xs mt-2">
+              Za chwilę zobaczycie razem wyniki i nagrody! 🏆
+            </p>
+          </div>
+          <button onClick={onComplete} className="text-pink-200 text-sm hover:text-white">
+            ← Powrót do mapy
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Results view
   if (showResults) {
