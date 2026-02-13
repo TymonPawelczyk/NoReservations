@@ -1,0 +1,9 @@
+// PWA placeholder icons (would need actual icon files in production)
+export default function Icon192() {
+  return (
+    <svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="192" height="192" fill="#e91e63"/>
+      <text x="96" y="120" fontSize="72" textAnchor="middle" fill="white" fontFamily="monospace" fontWeight="bold">BR</text>
+    </svg>
+  );
+}
