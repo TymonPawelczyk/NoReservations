@@ -18,6 +18,7 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
   const [partnerAnswers, setPartnerAnswers] = useState<Record<string, string> | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [outcome, setOutcome] = useState<'italian' | 'hotpot' | null>(null);
+  const [finishedAnswering, setFinishedAnswering] = useState(false);
 
   useEffect(() => {
     // Listen to answers
@@ -34,6 +35,24 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
     return () => unsubscribe();
   }, [code, userId]);
 
+  useEffect(() => {
+    // Listen to session outcome
+    const unsubscribe = onSnapshot(doc(db, 'sessions', code), (snapshot) => {
+      if (snapshot.exists()) {
+        const sessionData = snapshot.data();
+        if (sessionData.outcomes?.stage1) {
+          setOutcome(sessionData.outcomes.stage1);
+          // Auto-show comparison when outcome is ready
+          if (finishedAnswering) {
+            setShowComparison(true);
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [code, finishedAnswering]);
+
   const handleAnswer = async (questionId: string, value: string) => {
     const newAnswers = { ...answers, [questionId]: value };
     setAnswers(newAnswers);
@@ -49,9 +68,10 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
     if (currentQ < stage1Questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
-      // Calculate outcome
+      // Mark as finished
+      setFinishedAnswering(true);
+      // Try to calculate outcome (will only work if both finished)
       await calculateOutcome(newAnswers);
-      setShowComparison(true);
     }
   };
 
@@ -64,7 +84,18 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
     const userIds = Object.keys(allAnswers);
 
     if (userIds.length < 2) {
-      // Partner hasn't finished yet
+      // Partner hasn't joined yet - just wait for them
+      return;
+    }
+
+    // Check if both have completed all questions
+    const bothFinished = userIds.every(uid => {
+      const userAns = allAnswers[uid].answers as Record<string, string>;
+      return Object.keys(userAns).length === stage1Questions.length;
+    });
+
+    if (!bothFinished) {
+      // Wait for both to finish all questions
       return;
     }
 
@@ -95,13 +126,34 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
       result = parseInt(code) % 2 === 0 ? 'italian' : 'hotpot';
     }
 
-    setOutcome(result);
-
-    // Save outcome to session
+    // Save outcome to session (this will trigger both users' listeners)
     await updateDoc(doc(db, 'sessions', code), {
       'outcomes.stage1': result,
     });
   };
+
+  // Waiting screen (when finished but partner hasn't)
+  if (finishedAnswering && !showComparison) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="max-w-md w-full space-y-6 text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <h2 className="text-2xl font-bold text-white">Czekam na partnera...</h2>
+          <p className="text-pink-200 text-sm">
+            Skończyłeś/aś pytania! Czekaj aż partner odpowie.
+          </p>
+          <div className="bg-white/10 border-4 border-white/30 p-4">
+            <p className="text-white text-xs">
+              Za chwilę zobaczycie razem wynik! 🍕🍲
+            </p>
+          </div>
+          <button onClick={onComplete} className="text-pink-200 text-sm hover:text-white">
+            ← Powrót do mapy
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showComparison) {
     return (
