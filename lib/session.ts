@@ -13,6 +13,11 @@ export interface SessionData {
     stage1?: 'italian' | 'hotpot';
     stage2?: 'museum' | 'funhouse' | 'bowling' | 'pool';
   };
+  resetRequests?: {
+    stage1?: Record<string, boolean>;
+    stage2?: Record<string, boolean>;
+    stage3?: Record<string, boolean>;
+  };
 }
 
 export interface Participant {
