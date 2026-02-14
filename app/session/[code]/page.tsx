@@ -162,7 +162,7 @@ export default function SessionPage() {
         {/* Header with code */}
         <div className="text-center bg-white/10 border-4 border-white/30 p-4">
           <h2 className="text-white text-sm mb-2">Kod sesji:</h2>
-          <div className="text-4xl font-bold text-yellow-400 tracking-widest">{code}</div>
+          <div className="text-2xl sm:text-4xl font-bold text-yellow-400 tracking-widest">{code}</div>
           {isWaitingForPartner && (
             <p className="text-pink-200 text-xs mt-2">Czekam na partnera...</p>
           )}
@@ -326,15 +326,15 @@ function StageCard({ number, title, locked, current, completed, onEnter, disable
     <button
       onClick={onEnter}
       disabled={locked || disabled}
-      className={`w-full p-6 border-4 ${bgClass} ${textClass} text-left transition-all ${
+      className={`w-full p-4 sm:p-6 border-4 ${bgClass} ${textClass} text-left transition-all ${
         !locked && !disabled ? 'hover:scale-105 cursor-pointer' : 'cursor-not-allowed'
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className="text-4xl">{icon}</div>
-        <div className="flex-1">
-          <div className="font-bold text-lg">Etap {number}</div>
-          <div className="text-sm">{title}</div>
+        <div className="text-2xl sm:text-4xl">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-base sm:text-lg">Etap {number}</div>
+          <div className="text-xs sm:text-sm">{title}</div>
         </div>
       </div>
     </button>
