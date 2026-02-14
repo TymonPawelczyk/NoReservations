@@ -86,6 +86,11 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
         return;
       }
       
+      // Reset easter egg states if outcome is not cinema
+      if (showEasterEgg) {
+        setShowEasterEgg(false);
+      }
+      
       setFinalActivity(outcome as Activity);
           // Show mini-game for any activity (except cinema) if we haven't played yet
           if (outcome !== 'cinema' && finishedAnswering && !miniGameScore && !showMiniGame && !showComparison) {
@@ -93,17 +98,20 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
           } else if (finishedAnswering) {
             setShowComparison(true);
           }
-        } else if (showEasterEgg && showComparison) {
-          // Outcome was deleted (partner clicked back from cinema easter egg)
-          setShowEasterEgg(false);
-          setShowComparison(false);
-          setFinishedAnswering(false);
-          setCurrentQ(4);
-          
-          // Clear q5 answer
-          const newAnswers = { ...answers };
-          delete newAnswers['q5'];
-          setAnswers(newAnswers);
+        } else {
+          // No outcome yet
+          if (showEasterEgg && showComparison) {
+            // Outcome was deleted (partner clicked back from cinema easter egg)
+            setShowEasterEgg(false);
+            setShowComparison(false);
+            setFinishedAnswering(false);
+            setCurrentQ(4);
+            
+            // Clear q5 answer
+            const newAnswers = { ...answers };
+            delete newAnswers['q5'];
+            setAnswers(newAnswers);
+          }
         }
 
         // Get agreement percentage
