@@ -20,13 +20,14 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [partnerAnswers, setPartnerAnswers] = useState<Record<string, string> | null>(null);
-  const [showActivitySelection, setShowActivitySelection] = useState(false);
+  const [finishedAnswering, setFinishedAnswering] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const [showMiniGame, setShowMiniGame] = useState(false);
   const [miniGameScore, setMiniGameScore] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [finalActivity, setFinalActivity] = useState<Activity | null>(null);
+  const [agreementPercentage, setAgreementPercentage] = useState<number>(0);
   const [hasCompletedBefore, setHasCompletedBefore] = useState(false);
   const [resetRequested, setResetRequested] = useState(false);
   const [partnerResetRequested, setPartnerResetRequested] = useState(false);
@@ -38,13 +39,12 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
       if (answersSnap.exists()) {
         const data = answersSnap.data() as AnswersData;
         const userData = data[userId];
-        if (userData?.answers?.finalActivity) {
-          // User already completed - load their data and show comparison
+        if (userData?.answers && Object.keys(userData.answers).length === stage2Questions.length) {
+          // User already completed - load their data
           setAnswers(userData.answers as Record<string, string>);
-          setSelectedActivity(userData.answers.finalActivity as Activity);
           setMiniGameScore(userData.miniGameScore || null);
+          setFinishedAnswering(true);
           setHasCompletedBefore(true);
-          setShowComparison(true);
         }
       }
     };
@@ -73,7 +73,20 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
       if (snapshot.exists()) {
         const sessionData = snapshot.data();
         if (sessionData.outcomes?.stage2) {
-          setFinalActivity(sessionData.outcomes.stage2);
+          const outcome = sessionData.outcomes.stage2 as Activity;
+          setFinalActivity(outcome);
+          
+          // If bowling wins and we haven't played the mini-game yet
+          if (outcome === 'bowling' && finishedAnswering && !miniGameScore && !showMiniGame && !showComparison) {
+            setShowMiniGame(true);
+          } else if (finishedAnswering) {
+            setShowComparison(true);
+          }
+        }
+
+        // Get agreement percentage
+        if (sessionData.outcomeData?.stage2Agreement !== undefined) {
+          setAgreementPercentage(sessionData.outcomeData.stage2Agreement);
         }
         
         // Check reset requests
@@ -92,7 +105,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     });
 
     return () => unsubscribe();
-  }, [code, userId]);
+  }, [code, userId, finishedAnswering, miniGameScore, showMiniGame, showComparison]);
 
   const requestReset = async () => {
     await updateDoc(doc(db, 'sessions', code), {
@@ -104,13 +117,14 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     // Clear all state
     setAnswers({});
     setPartnerAnswers(null);
-    setShowActivitySelection(false);
+    setFinishedAnswering(false);
     setSelectedActivity(null);
     setShowEasterEgg(false);
     setShowMiniGame(false);
     setMiniGameScore(null);
     setShowComparison(false);
     setFinalActivity(null);
+    setAgreementPercentage(0);
     setHasCompletedBefore(false);
     setCurrentQ(0);
     setResetRequested(false);
@@ -120,6 +134,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     await deleteDoc(doc(db, 'answers', code, 'stage2', 'data'));
     await updateDoc(doc(db, 'sessions', code), {
       'outcomes.stage2': deleteField(),
+      'outcomeData.stage2Agreement': deleteField(),
       'resetRequests.stage2': deleteField(),
     });
   };
@@ -137,32 +152,80 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     if (currentQ < stage2Questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
-      setShowActivitySelection(true);
+      setFinishedAnswering(true);
+      calculateFinalActivity(newAnswers);
     }
   };
 
+  const calculateFinalActivity = async (userAnswers: Record<string, string>) => {
+    // Wait for partner answers
+    const answersDoc = await getDoc(doc(db, 'answers', code, 'stage2', 'data'));
+    if (!answersDoc.exists()) return;
+
+    const allAnswers = answersDoc.data() as AnswersData;
+    const userIds = Object.keys(allAnswers);
+
+    if (userIds.length < 2) return;
+
+    const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
+    const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
+    
+    if (!stage2Questions.every(q => user1Ans[q.id] && user2Ans[q.id])) return;
+
+    // Calculate scores
+    let scores = { museum: 0, funhouse: 0, bowling: 0, pool: 0 };
+    let matchingAnswers = 0;
+
+    userIds.forEach(uid => {
+      const userAns = allAnswers[uid].answers as Record<string, string>;
+      stage2Questions.forEach(q => {
+        const answer = userAns[q.id];
+        const option = q.options.find(o => o.value === answer);
+        if (option && 'points' in option) {
+          const pts = option.points as any;
+          scores.museum += pts.museum || 0;
+          scores.funhouse += pts.funhouse || 0;
+          scores.bowling += pts.bowling || 0;
+          scores.pool += pts.pool || 0;
+        }
+      });
+    });
+
+    stage2Questions.forEach(q => {
+      if (user1Ans[q.id] === user2Ans[q.id]) matchingAnswers++;
+    });
+    const agreement = Math.round((matchingAnswers / stage2Questions.length) * 100);
+
+    // Determine winner
+    let winner: Activity = 'museum';
+    let maxScore = -1;
+    (Object.entries(scores) as [Activity, number][]).forEach(([act, score]) => {
+      if (score > maxScore) {
+        maxScore = score;
+        winner = act;
+      }
+    });
+
+    // Save outcome
+    await updateDoc(doc(db, 'sessions', code), {
+      'outcomes.stage2': winner,
+      'outcomeData.stage2Agreement': agreement,
+    });
+  };
+
   const handleActivitySelect = async (activity: Activity) => {
-    // Easter egg: Cinema
-    if (activity === 'cinema') {
-      setShowEasterEgg(true);
-      setTimeout(() => setShowEasterEgg(false), 3000);
-      return;
-    }
-
+    // This is now used only for fallback or direct selection if we ever need it back
+    // For now we keep the logic to avoid breaking other parts
     setSelectedActivity(activity);
-
-    // Save selection
     await setDoc(doc(db, 'answers', code, 'stage2', 'data'), {
       [userId]: {
         answers: { ...answers, finalActivity: activity },
       },
     }, { merge: true });
 
-    // If bowling, show mini-game
     if (activity === 'bowling') {
       setShowMiniGame(true);
     } else {
-      calculateFinalActivity(activity);
       setShowComparison(true);
     }
   };
@@ -173,46 +236,29 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
 
     await setDoc(doc(db, 'answers', code, 'stage2', 'data'), {
       [userId]: {
-        answers: { ...answers, finalActivity: 'bowling' },
         miniGameScore: score,
       },
     }, { merge: true });
 
-    calculateFinalActivity('bowling');
     setShowComparison(true);
   };
-
-  const calculateFinalActivity = async (userActivity: Activity) => {
-    // For MVP, just use the first person's choice or random if different
-    const result = userActivity;
-
-    // Save outcome to session (this will trigger both users' listeners)
-    await updateDoc(doc(db, 'sessions', code), {
-      'outcomes.stage2': result,
-    });
-  };
-
-  // Easter egg view
-  if (showEasterEgg) {
-    return (
-      <div className="min-h-screen p-4 flex items-center justify-center bg-black/90">
-        <div className="text-center">
-          <div className="mb-6">
-            <div className="text-8xl mb-4">😏</div>
-          </div>
-          <SpeechBubble 
-            text="Chyba żartujesz?? Nuuuda ;)" 
-            className="inline-block"
-            autoCloseDuration={0}
-          />
-        </div>
-      </div>
-    );
-  }
 
   // Mini-game view
   if (showMiniGame) {
     return <BowlingMiniGame onComplete={handleMiniGameComplete} />;
+  }
+
+  // Waiting screen
+  if (finishedAnswering && !showComparison && !showMiniGame) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center text-center">
+        <div className="max-w-md w-full space-y-6">
+          <div className="text-6xl mb-4 animate-bounce">⏳</div>
+          <h2 className="text-2xl font-bold text-white">Obliczanie wspólnej pasji...</h2>
+          <p className="text-pink-200">Czekam, aż partner dokończy wybór.</p>
+        </div>
+      </div>
+    );
   }
 
   // Comparison view
@@ -282,45 +328,6 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
 
           <button onClick={onComplete} className="retro-button w-full">
             Powrót do mapy
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Activity selection view
-  if (showActivitySelection) {
-    const activities: { id: Activity; label: string; icon: string }[] = [
-      { id: 'museum', label: 'Muzeum', icon: '🎨' },
-      { id: 'funhouse', label: 'FunHouse', icon: '🎪' },
-      { id: 'bowling', label: 'Kręgle', icon: '🎳' },
-      { id: 'pool', label: 'Basen', icon: '🏊' },
-      { id: 'cinema', label: 'Film w kinie', icon: '🎬' },
-    ];
-
-    return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <div className="max-w-md w-full space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-white mb-2">Wybierz aktywność</h2>
-            <p className="text-pink-200 text-sm">Co będziemy robić?</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {activities.map(activity => (
-              <button
-                key={activity.id}
-                onClick={() => handleActivitySelect(activity.id)}
-                className="bg-white/10 border-4 border-white/30 hover:border-yellow-400 p-6 text-center transition-all hover:scale-105"
-              >
-                <div className="text-5xl mb-2">{activity.icon}</div>
-                <p className="text-white font-bold text-sm">{activity.label}</p>
-              </button>
-            ))}
-          </div>
-
-          <button onClick={onComplete} className="block text-center text-pink-200 text-sm hover:text-white">
-            ← Powrót
           </button>
         </div>
       </div>
