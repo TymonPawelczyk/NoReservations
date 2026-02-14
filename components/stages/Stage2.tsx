@@ -14,7 +14,7 @@ interface Stage2Props {
   onComplete: () => void;
 }
 
-type Activity = 'museum' | 'funhouse' | 'bowling' | 'pool' | 'cinema';
+type Activity = 'museum' | 'walk' | 'bowling' | 'pool' | 'picnic' | 'cinema';
 
 export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   const [currentQ, setCurrentQ] = useState(0);
@@ -200,7 +200,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     }
 
     // Calculate scores
-    let scores = { museum: 0, funhouse: 0, bowling: 0, pool: 0 };
+    let scores = { museum: 0, walk: 0, bowling: 0, pool: 0, picnic: 0 };
     let matchingAnswers = 0;
 
     userIds.forEach(uid => {
@@ -211,9 +211,10 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
         if (option && 'points' in option) {
           const pts = option.points as any;
           scores.museum += pts.museum || 0;
-          scores.funhouse += pts.funhouse || 0;
+          scores.walk += pts.walk || 0;
           scores.bowling += pts.bowling || 0;
           scores.pool += pts.pool || 0;
+          scores.picnic += pts.picnic || 0;
         }
       });
     });
@@ -366,9 +367,29 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
               <div className="p-4 bg-gradient-to-r from-purple-400 to-pink-500 border-4 border-purple-600 text-center">
                 <p className="text-2xl font-bold text-white">
                   {finalActivity === 'museum' && '🎨 Muzeum'}
-                  {finalActivity === 'funhouse' && '🎪 FunHouse'}
+                  {finalActivity === 'walk' && '🚶 Spacer'}
                   {finalActivity === 'bowling' && '🎳 Kręgle'}
                   {finalActivity === 'pool' && '🏊 Basen'}
+                  {finalActivity === 'picnic' && '🧺 Piknik w domu'}
+                </p>
+                {finalActivity === 'picnic' && (
+                  <p className="text-sm text-white/90 mt-2">
+                    Idziemy do sklepu po ser, wędlinę i bagietkę. Wino masz w domu.
+                    Kładziemy koc na podłodze i chillujemy! 🍷🧀
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* Agreement percentage */}
+            {agreementPercentage > 0 && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center border-4 border-blue-600">
+                <p className="text-lg font-bold">Zgodność: {agreementPercentage}%</p>
+                <p className="text-xs mt-1 opacity-80">
+                  {agreementPercentage >= 80 && '🎉 Niesamowita zgoda!'}
+                  {agreementPercentage >= 60 && agreementPercentage < 80 && '👍 Świetna zgodność!'}
+                  {agreementPercentage >= 40 && agreementPercentage < 60 && '😊 Dobra zgoda!'}
+                  {agreementPercentage < 40 && '🤔 Różne gusta!'}
                 </p>
               </div>
             )}
@@ -376,6 +397,42 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
             {miniGameScore !== null && (
               <div className="mt-4 p-3 bg-yellow-400 text-black text-center">
                 <p className="font-bold">Twój wynik w mini-grze: {miniGameScore}/100</p>
+              </div>
+            )}
+            
+            {/* Show answer comparison */}
+            {partnerAnswers && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-white font-bold text-sm text-center mb-3">📊 Porównanie odpowiedzi</h4>
+                {stage2Questions.map((q, idx) => {
+                  const myAnswer = answers[q.id];
+                  const partnerAnswer = partnerAnswers[q.id];
+                  const match = myAnswer === partnerAnswer;
+                  
+                  const myOption = q.options.find(o => o.value === myAnswer);
+                  const partnerOption = q.options.find(o => o.value === partnerAnswer);
+                  
+                  return (
+                    <div key={q.id} className={`p-2 border-2 rounded ${
+                      match ? 'bg-green-500/20 border-green-400' : 'bg-gray-500/20 border-gray-400'
+                    }`}>
+                      <p className="text-white text-xs font-bold mb-1">P{idx + 1}: {q.question}</p>
+                      <div className="flex gap-2 text-xs">
+                        <div className="flex-1">
+                          <span className="text-pink-300">Ty:</span>
+                          <span className="text-white ml-1">{myOption?.label || '?'}</span>
+                        </div>
+                        <div className="text-center">
+                          {match ? '✓' : '✗'}
+                        </div>
+                        <div className="flex-1 text-right">
+                          <span className="text-blue-300">Partner:</span>
+                          <span className="text-white ml-1">{partnerOption?.label || '?'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             
@@ -427,6 +484,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
 
   // Questions view
   const question = stage2Questions[currentQ];
+  const currentAnswer = answers[question.id];
 
   return (
     <div className="min-h-screen p-4 flex items-center justify-center">
@@ -440,15 +498,20 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
           <h3 className="text-white text-xl font-bold mb-6 text-center">{question.question}</h3>
 
           <div className="space-y-3">
-            {question.options.map(option => (
-              <button
-                key={option.value}
-                onClick={() => handleAnswer(question.id, option.value)}
-                className="retro-button w-full text-sm"
-              >
-                {option.label}
-              </button>
-            ))}
+            {question.options.map(option => {
+              const isSelected = currentAnswer === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleAnswer(question.id, option.value)}
+                  className={`retro-button w-full text-sm ${
+                    isSelected ? 'bg-pink-600 border-pink-400' : ''
+                  }`}
+                >
+                  {isSelected && '✓ '}{option.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
