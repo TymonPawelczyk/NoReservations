@@ -165,7 +165,7 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
       <div className="min-h-screen p-4 flex items-center justify-center">
         <div className="max-w-md w-full space-y-6 text-center">
           <div className="text-6xl mb-4">⏳</div>
-          <h2 className="text-2xl font-bold text-white">Czekam na partnera...</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-white">Czekam na partnera...</h2>
           <p className="text-pink-200 text-sm">
             Skończyłeś/aś quiz! Czekaj aż partner odpowie.
           </p>
@@ -190,20 +190,20 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
     const threshold = Math.ceil(stage3Questions.length * 0.6);
 
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
+      <div className="min-h-screen p-4 py-6">
         <div className="max-w-md w-full space-y-6">
-          <h2 className="text-3xl font-bold text-white text-center">Wyniki Quizu!</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white text-center">Wyniki Quizu!</h2>
 
-          <div className="bg-white/10 border-4 border-white/30 p-6 space-y-4">
+          <div className="bg-white/10 border-4 border-white/30 p-3 sm:p-6 space-y-4">
             {/* Scores */}
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-yellow-400 font-bold text-sm">TY</p>
-                <p className="text-4xl font-bold text-white">{myScore}/{stage3Questions.length}</p>
+                <p className="text-2xl sm:text-4xl font-bold text-white">{myScore}/{stage3Questions.length}</p>
               </div>
               <div className="text-center">
                 <p className="text-pink-300 font-bold text-sm">PARTNER</p>
-                <p className="text-4xl font-bold text-white">{partnerScore}/{stage3Questions.length}</p>
+                <p className="text-2xl sm:text-4xl font-bold text-white">{partnerScore}/{stage3Questions.length}</p>
               </div>
             </div>
 
@@ -316,8 +316,8 @@ export default function Stage3({ code, userId, onComplete }: Stage3Props) {
           <p className="text-yellow-400 text-xs mt-1">Zdobądź {Math.ceil(stage3Questions.length * 0.6)}+/{stage3Questions.length} na masaż!</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-6">
-          <h3 className="text-white text-lg font-bold mb-6 text-center">{question.question}</h3>
+        <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-6">
+          <h3 className="text-white text-sm sm:text-lg font-bold mb-4 sm:mb-6 text-center">{question.question}</h3>
 
           <div className="space-y-3">
             {question.options.map(option => (

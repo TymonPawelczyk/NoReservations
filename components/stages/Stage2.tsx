@@ -337,7 +337,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
       <div className="min-h-screen p-4 flex items-center justify-center text-center">
         <div className="max-w-md w-full space-y-6">
           <div className="text-6xl mb-4 animate-bounce">⏳</div>
-          <h2 className="text-2xl font-bold text-white">Obliczanie wspólnej pasji...</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-white">Obliczanie wspólnej pasji...</h2>
           <p className="text-pink-200">Czekam, aż partner dokończy wybór.</p>
         </div>
       </div>
@@ -347,14 +347,14 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   // Easter egg - Cinema rejection
   if (showEasterEgg && showComparison) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
+      <div className="min-h-screen p-4">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
             <div className="text-6xl mb-4">🎬</div>
-            <h2 className="text-3xl font-bold text-white mb-4">Kino? Serio?</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-4">Kino? Serio?</h2>
           </div>
 
-          <div className="bg-red-500/20 border-4 border-red-500 p-6 space-y-4">
+          <div className="bg-red-500/20 border-4 border-red-500 p-4 sm:p-6 space-y-4">
             <SpeechBubble 
               text="Chyba żartujesz?? Nuuuda! 😴"
               autoCloseDuration={0}
@@ -422,16 +422,16 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   // Comparison view
   if (showComparison) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
+      <div className="min-h-screen p-4 py-6">
         <div className="max-w-md w-full space-y-6">
-          <h2 className="text-3xl font-bold text-white text-center">Wyniki Etapu 2</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white text-center">Wyniki Etapu 2</h2>
 
-          <div className="bg-white/10 border-4 border-white/30 p-6 space-y-4">
-            <h3 className="text-xl text-white font-bold text-center">Wybrana aktywność</h3>
+          <div className="bg-white/10 border-4 border-white/30 p-3 sm:p-6 space-y-4">
+            <h3 className="text-base sm:text-xl text-white font-bold text-center">Wybrana aktywność</h3>
             
             {finalActivity && (
               <div className="p-4 bg-gradient-to-r from-purple-400 to-pink-500 border-4 border-purple-600 text-center">
-                <p className="text-2xl font-bold text-white">
+                <p className="text-lg sm:text-2xl font-bold text-white">
                   {finalActivity === 'museum' && '🎨 Muzeum'}
                   {finalActivity === 'walk' && '🚶 Spacer'}
                   {finalActivity === 'bowling' && '🎳 Kręgle'}
@@ -450,7 +450,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
             {/* Agreement percentage */}
             {agreementPercentage > 0 && (
               <div className="mt-4 p-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center border-4 border-blue-600">
-                <p className="text-lg font-bold">Zgodność: {agreementPercentage}%</p>
+                <p className="text-sm sm:text-lg font-bold">Zgodność: {agreementPercentage}%</p>
                 <p className="text-xs mt-1 opacity-80">
                   {agreementPercentage >= 80 ? '🎉 Niesamowita zgoda!' :
                    agreementPercentage >= 60 ? '👍 Świetna zgodność!' :
@@ -566,8 +566,8 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
           <p className="text-white text-xs">Pytanie {currentQ + 1}/{stage2Questions.length}</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-6">
-          <h3 className="text-white text-xl font-bold mb-6 text-center">{question.question}</h3>
+        <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-6">
+          <h3 className="text-white text-base sm:text-xl font-bold mb-4 sm:mb-6 text-center">{question.question}</h3>
 
           <div className="space-y-3">
             {question.options.map(option => {

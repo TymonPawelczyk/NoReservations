@@ -241,7 +241,7 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
       <div className="min-h-screen p-4 flex items-center justify-center">
         <div className="max-w-md w-full space-y-6 text-center">
           <div className="text-6xl mb-4">⏳</div>
-          <h2 className="text-2xl font-bold text-white">Czekam na partnera...</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-white">Czekam na partnera...</h2>
           <p className="text-pink-200 text-sm">
             Skończyłeś/aś pytania! Czekaj aż partner odpowie.
           </p>
@@ -260,12 +260,12 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
 
   if (showComparison) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
+      <div className="min-h-screen p-4 py-6">
         <div className="max-w-md w-full space-y-6">
-          <h2 className="text-3xl font-bold text-white text-center">Wyniki Etapu 1</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white text-center">Wyniki Etapu 1</h2>
 
-          <div className="bg-white/10 border-4 border-white/30 p-6 space-y-4">
-            <h3 className="text-xl text-white font-bold text-center">Porównanie odpowiedzi</h3>
+          <div className="bg-white/10 border-4 border-white/30 p-3 sm:p-6 space-y-4">
+            <h3 className="text-base sm:text-xl text-white font-bold text-center">Porównanie odpowiedzi</h3>
             
             {/* Agreement percentage */}
             <div className={`p-3 border-4 text-center ${
@@ -273,7 +273,7 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
               agreementPercentage >= 50 ? 'bg-yellow-500/20 border-yellow-400' :
               'bg-red-500/20 border-red-400'
             }`}>
-              <p className="text-white font-bold text-lg">
+              <p className="text-white font-bold text-sm sm:text-lg">
                 {agreementPercentage}% zgodności odpowiedzi
               </p>
               <p className="text-white/80 text-xs mt-1">
@@ -321,8 +321,8 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
 
             {outcome && (
               <div className="mt-6 p-4 bg-gradient-to-r from-yellow-400 to-orange-500 border-4 border-yellow-600 text-center">
-                <p className="text-black font-bold text-lg mb-2">DECYZJA:</p>
-                <p className="text-2xl font-bold text-black">
+                <p className="text-black font-bold text-sm sm:text-lg mb-2">DECYZJA:</p>
+                <p className="text-lg sm:text-2xl font-bold text-black">
                   {outcome === 'italian' && '🍕 WŁOSKIE!'}
                   {outcome === 'hotpot' && '🍲 HOT POT!'}
                   {outcome === 'sushi' && '🍣 SUSHI!'}
@@ -386,8 +386,8 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
           <p className="text-white text-xs">Pytanie {currentQ + 1}/{stage1Questions.length}</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-6">
-          <h3 className="text-white text-xl font-bold mb-6 text-center">{question.question}</h3>
+        <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-6">
+          <h3 className="text-white text-base sm:text-xl font-bold mb-4 sm:mb-6 text-center">{question.question}</h3>
 
           <div className="space-y-3">
             {question.options.map(option => (
