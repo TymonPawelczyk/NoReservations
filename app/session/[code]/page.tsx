@@ -9,6 +9,7 @@ import Avatar from '@/components/Avatar';
 import Stage1 from '@/components/stages/Stage1';
 import Stage2 from '@/components/stages/Stage2';
 import Stage3 from '@/components/stages/Stage3';
+import ConfirmExitModal from '@/components/ConfirmExitModal';
 
 export default function SessionPage() {
   const params = useParams();
@@ -19,6 +20,7 @@ export default function SessionPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStageView, setCurrentStageView] = useState<number | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const advancingStageRef = useRef(false);
 
   useEffect(() => {
@@ -106,6 +108,24 @@ export default function SessionPage() {
     }
   };
 
+  const handleExitSession = () => {
+    // Clear localStorage
+    localStorage.removeItem('userId');
+    localStorage.removeItem('sessionCode');
+    localStorage.removeItem('userName');
+    
+    // Redirect to home
+    router.push('/');
+  };
+
+  const handleExitClick = () => {
+    setShowExitConfirm(true);
+  };
+
+  const handleCancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
   if (loading || !session || !userId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -152,7 +172,7 @@ export default function SessionPage() {
         <div className="grid grid-cols-2 gap-4">
           {/* Current User */}
           <div className="bg-white/10 border-4 border-yellow-400 p-4 text-center">
-            <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={100} />
+            <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={100} animated={true} />
             <p className="text-white font-bold mt-2">TY</p>
             <p className="text-pink-200 text-xs">{currentUser?.displayName}</p>
           </div>
@@ -161,7 +181,7 @@ export default function SessionPage() {
           <div className="bg-white/10 border-4 border-white/30 p-4 text-center">
             {partner ? (
               <>
-                <Avatar avatarKey={partner.avatarKey} emotion="happy" size={100} />
+                <Avatar avatarKey={partner.avatarKey} emotion="happy" size={100} animated={true} />
                 <p className="text-white font-bold mt-2">PARTNER</p>
                 <p className="text-pink-200 text-xs">{partner.displayName}</p>
               </>
@@ -254,7 +274,25 @@ export default function SessionPage() {
             )}
           </div>
         )}
+
+        {/* Exit Button */}
+        <div className="mt-8 pt-4 border-t-2 border-white/20">
+          <button
+            onClick={handleExitClick}
+            className="text-red-300 hover:text-red-400 text-sm w-full text-center transition-colors"
+          >
+            🚪 Wyjdź z sesji
+          </button>
+        </div>
       </div>
+
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <ConfirmExitModal
+          onConfirm={handleExitSession}
+          onCancel={handleCancelExit}
+        />
+      )}
     </main>
   );
 }
