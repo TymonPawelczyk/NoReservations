@@ -374,7 +374,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
                 </p>
                 {finalActivity === 'picnic' && (
                   <p className="text-sm text-white/90 mt-2">
-                    Idziemy do sklepu po ser, wędlinę i bagietkę. Wino masz w domu.
+                    Idziemy do sklepu po ser, wędlinę i bagietkę. Wino jest w domu.
                     Kładziemy koc na podłodze i chillujemy! 🍷🧀
                   </p>
                 )}
@@ -413,21 +413,20 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
                   const partnerOption = q.options.find(o => o.value === partnerAnswer);
                   
                   return (
-                    <div key={q.id} className={`p-2 border-2 rounded ${
+                    <div key={q.id} className={`p-3 border-2 rounded ${
                       match ? 'bg-green-500/20 border-green-400' : 'bg-gray-500/20 border-gray-400'
                     }`}>
-                      <p className="text-white text-xs font-bold mb-1">P{idx + 1}: {q.question}</p>
-                      <div className="flex gap-2 text-xs">
-                        <div className="flex-1">
-                          <span className="text-pink-300">Ty:</span>
-                          <span className="text-white ml-1">{myOption?.label || '?'}</span>
+                      <p className="text-white text-xs font-bold mb-2 break-words">P{idx + 1}: {q.question}</p>
+                      <div className="space-y-1">
+                        <div className="flex items-start gap-2">
+                          <span className="text-pink-300 text-xs font-semibold shrink-0">Ty:</span>
+                          <span className="text-white text-xs break-words flex-1">{myOption?.label || '?'}</span>
+                          <span className="text-lg shrink-0">{match ? '✓' : ''}</span>
                         </div>
-                        <div className="text-center">
-                          {match ? '✓' : '✗'}
-                        </div>
-                        <div className="flex-1 text-right">
-                          <span className="text-blue-300">Partner:</span>
-                          <span className="text-white ml-1">{partnerOption?.label || '?'}</span>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-300 text-xs font-semibold shrink-0">Partner:</span>
+                          <span className="text-white text-xs break-words flex-1">{partnerOption?.label || '?'}</span>
+                          <span className="text-lg shrink-0">{match ? '✓' : '✗'}</span>
                         </div>
                       </div>
                     </div>
