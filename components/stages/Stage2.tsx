@@ -7,6 +7,10 @@ import { stage2Questions } from '@/lib/questions';
 import { AnswersData } from '@/lib/session';
 import SpeechBubble from '@/components/SpeechBubble';
 import BowlingMiniGame from '@/components/BowlingMiniGame';
+import MuseumMiniGame from '@/components/MuseumMiniGame';
+import WalkMiniGame from '@/components/WalkMiniGame';
+import PoolMiniGame from '@/components/PoolMiniGame';
+import PicnicMiniGame from '@/components/PicnicMiniGame';
 
 interface Stage2Props {
   code: string;
@@ -83,8 +87,8 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
       }
       
       setFinalActivity(outcome as Activity);
-          // If bowling wins and we haven't played the mini-game yet
-          if (outcome === 'bowling' && finishedAnswering && !miniGameScore && !showMiniGame && !showComparison) {
+          // Show mini-game for any activity (except cinema) if we haven't played yet
+          if (outcome !== 'cinema' && finishedAnswering && !miniGameScore && !showMiniGame && !showComparison) {
             setShowMiniGame(true);
           } else if (finishedAnswering) {
             setShowComparison(true);
@@ -272,8 +276,22 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   };
 
   // Mini-game view
-  if (showMiniGame) {
-    return <BowlingMiniGame onComplete={handleMiniGameComplete} />;
+  if (showMiniGame && finalActivity) {
+    if (finalActivity === 'museum') {
+      return <MuseumMiniGame onComplete={handleMiniGameComplete} />;
+    }
+    if (finalActivity === 'walk') {
+      return <WalkMiniGame onComplete={handleMiniGameComplete} />;
+    }
+    if (finalActivity === 'bowling') {
+      return <BowlingMiniGame onComplete={handleMiniGameComplete} />;
+    }
+    if (finalActivity === 'pool') {
+      return <PoolMiniGame onComplete={handleMiniGameComplete} />;
+    }
+    if (finalActivity === 'picnic') {
+      return <PicnicMiniGame onComplete={handleMiniGameComplete} />;
+    }
   }
 
   // Waiting screen
@@ -374,7 +392,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
                 </p>
                 {finalActivity === 'picnic' && (
                   <p className="text-sm text-white/90 mt-2">
-                    Idziemy do sklepu po ser, wędlinę i bagietkę. Wino jest w domu.
+                    Idziemy do sklepu po ser, wędlinę i bagietkę. Wino mam w domu.
                     Kładziemy koc na podłodze i chillujemy! 🍷🧀
                   </p>
                 )}
@@ -394,9 +412,16 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
               </div>
             )}
 
-            {miniGameScore !== null && (
-              <div className="mt-4 p-3 bg-yellow-400 text-black text-center">
-                <p className="font-bold">Twój wynik w mini-grze: {miniGameScore}/100</p>
+            {miniGameScore !== null && finalActivity && (
+              <div className="mt-4 p-3 bg-yellow-400 text-black text-center border-4 border-yellow-600">
+                <p className="font-bold">
+                  {finalActivity === 'museum' && '🎨 Quiz muzealny:'}
+                  {finalActivity === 'walk' && '🚶 Spacer po parku:'}
+                  {finalActivity === 'bowling' && '🎳 Mini-kręgle:'}
+                  {finalActivity === 'pool' && '🏊 Skoki do wody:'}
+                  {finalActivity === 'picnic' && '🧺 Układanie pikniku:'}
+                  {' '}{miniGameScore}/100
+                </p>
               </div>
             )}
             
