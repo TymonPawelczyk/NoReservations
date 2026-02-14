@@ -160,4 +160,67 @@ export const stage3Questions = [
       { value: '1991', label: '1991', correct: false },
     ],
   },
+  {
+    id: 'q6',
+    question: 'Który ocean jest największy?',
+    options: [
+      { value: 'atlantic', label: 'Atlantycki', correct: false },
+      { value: 'pacific', label: 'Spokojny', correct: true },
+      { value: 'indian', label: 'Indyjski', correct: false },
+    ],
+  },
+  {
+    id: 'q7',
+    question: 'Ile kości ma dorosły człowiek?',
+    options: [
+      { value: '186', label: '186', correct: false },
+      { value: '206', label: '206', correct: true },
+      { value: '226', label: '226', correct: false },
+    ],
+  },
+  {
+    id: 'q8',
+    question: 'Kto namalował "Gwiaździstą noc"?',
+    options: [
+      { value: 'monet', label: 'Monet', correct: false },
+      { value: 'vangogh', label: 'Van Gogh', correct: true },
+      { value: 'picasso', label: 'Picasso', correct: false },
+    ],
+  },
+  {
+    id: 'q9',
+    question: 'Jaki jest najdłuższy river na świecie?',
+    options: [
+      { value: 'amazon', label: 'Amazonka', correct: false },
+      { value: 'nile', label: 'Nil', correct: true },
+      { value: 'mississippi', label: 'Missisipi', correct: false },
+    ],
+  },
+  {
+    id: 'q10',
+    question: 'W jakim kraju znajduje się Machu Picchu?',
+    options: [
+      { value: 'bolivia', label: 'Boliwia', correct: false },
+      { value: 'peru', label: 'Peru', correct: true },
+      { value: 'colombia', label: 'Kolumbia', correct: false },
+    ],
+  },
+  {
+    id: 'q11',
+    question: 'Ile wynosi prędkość światła (w przybliżeniu)?',
+    options: [
+      { value: '200k', label: '200 000 km/s', correct: false },
+      { value: '300k', label: '300 000 km/s', correct: true },
+      { value: '400k', label: '400 000 km/s', correct: false },
+    ],
+  },
+  {
+    id: 'q12',
+    question: 'Który pierwiastek ma symbol "Au"?',
+    options: [
+      { value: 'silver', label: 'Srebro', correct: false },
+      { value: 'gold', label: 'Złoto', correct: true },
+      { value: 'copper', label: 'Miedź', correct: false },
+    ],
+  },
 ];
