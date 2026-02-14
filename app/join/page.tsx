@@ -43,23 +43,43 @@ export default function JoinSessionPage() {
       const sessionData = sessionSnap.data();
       const participants = sessionData.participants || {};
 
-      if (Object.keys(participants).length >= 2) {
-        setError('Sesja jest już pełna (2/2)!');
-        setLoading(false);
-        return;
-      }
-
-      const uid = generateUserId();
-      const now = new Date();
-
-      await updateDoc(sessionRef, {
-        [`participants.${uid}`]: {
-          displayName: displayName.trim(),
-          avatarKey: selectedAvatar,
-          lastSeenAt: now.toISOString(),
-        },
-        [`ready.${uid}`]: false,
+      // Check if user is already in the session (rejoining)
+      const existingUserId = Object.keys(participants).find(uid => {
+        const participant = participants[uid];
+        return participant.displayName === displayName.trim() && 
+               participant.avatarKey === selectedAvatar;
       });
+
+      let uid: string;
+      
+      if (existingUserId) {
+        // User is rejoining - use existing userId
+        uid = existingUserId;
+        
+        // Update lastSeenAt
+        await updateDoc(sessionRef, {
+          [`participants.${uid}.lastSeenAt`]: new Date().toISOString(),
+        });
+      } else {
+        // New user joining
+        if (Object.keys(participants).length >= 2) {
+          setError('Sesja jest już pełna (2/2)! Jeśli wracasz, użyj tego samego imienia i avatara co wcześniej.');
+          setLoading(false);
+          return;
+        }
+
+        uid = generateUserId();
+        const now = new Date();
+
+        await updateDoc(sessionRef, {
+          [`participants.${uid}`]: {
+            displayName: displayName.trim(),
+            avatarKey: selectedAvatar,
+            lastSeenAt: now.toISOString(),
+          },
+          [`ready.${uid}`]: false,
+        });
+      }
 
       // Save to localStorage
       localStorage.setItem('sessionCode', code);
@@ -112,7 +132,7 @@ export default function JoinSessionPage() {
                 }`}
                 type="button"
               >
-                <Avatar avatarKey={key} emotion="happy" size={80} />
+                <Avatar avatarKey={key} emotion="happy" size={80} animated={selectedAvatar === key} />
                 <p className="text-white text-xs mt-2">{AVATAR_DISPLAY_NAMES[key]}</p>
               </button>
             ))}

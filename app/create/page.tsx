@@ -85,7 +85,7 @@ export default function CreateSessionPage() {
                 }`}
                 type="button"
               >
-                <Avatar avatarKey={key} emotion="happy" size={80} />
+                <Avatar avatarKey={key} emotion="happy" size={80} animated={selectedAvatar === key} />
                 <p className="text-white text-xs mt-2">{AVATAR_DISPLAY_NAMES[key]}</p>
               </button>
             ))}
