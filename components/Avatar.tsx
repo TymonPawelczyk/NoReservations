@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { AVATARS, AvatarKey, AvatarEmotion } from '@/lib/avatars';
 
 interface AvatarProps {
@@ -8,24 +9,46 @@ interface AvatarProps {
   emotion?: AvatarEmotion;
   size?: number;
   className?: string;
+  animated?: boolean;
 }
 
 export default function Avatar({ 
   avatarKey, 
   emotion = 'open', 
   size = 120,
-  className = '' 
+  className = '',
+  animated = false
 }: AvatarProps) {
-  const src = AVATARS[avatarKey]?.[emotion] || AVATARS.tymon.open;
+  const [currentEmotion, setCurrentEmotion] = useState<AvatarEmotion>(emotion);
+
+  useEffect(() => {
+    setCurrentEmotion(emotion);
+  }, [emotion]);
+
+  useEffect(() => {
+    if (!animated) return;
+
+    const interval = setInterval(() => {
+      // Randomly blink or change expression slightly
+      setCurrentEmotion(prev => {
+        if (prev === 'closed') return emotion;
+        return Math.random() > 0.1 ? 'closed' : emotion;
+      });
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [animated, emotion]);
+
+  const src = AVATARS[avatarKey]?.[currentEmotion] || AVATARS.tymon.open;
 
   return (
-    <div className={`pixel-art ${className}`}>
+    <div className={`pixel-art flex justify-center items-center mx-auto ${className}`} style={{ width: size, height: size }}>
       <Image
         src={src}
         alt={`Avatar ${avatarKey}`}
         width={size}
         height={size}
-        className="pixel-art"
+        className="pixel-art object-contain"
         unoptimized
       />
     </div>
