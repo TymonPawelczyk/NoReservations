@@ -11,7 +11,7 @@ export interface SessionData {
   participants: Record<string, Participant>;
   outcomes?: {
     stage1?: 'italian' | 'hotpot' | 'sushi';
-    stage2?: 'museum' | 'funhouse' | 'bowling' | 'pool' | 'cinema';
+    stage2?: 'museum' | 'walk' | 'bowling' | 'pool' | 'picnic' | 'cinema';
   };
   outcomeData?: {
     stage1Agreement?: number;
