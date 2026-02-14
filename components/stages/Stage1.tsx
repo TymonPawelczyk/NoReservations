@@ -17,7 +17,7 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [partnerAnswers, setPartnerAnswers] = useState<Record<string, string> | null>(null);
   const [showComparison, setShowComparison] = useState(false);
-  const [outcome, setOutcome] = useState<'italian' | 'hotpot' | null>(null);
+  const [outcome, setOutcome] = useState<'italian' | 'hotpot' | 'sushi' | null>(null);
   const [finishedAnswering, setFinishedAnswering] = useState(false);
   const [hasCompletedBefore, setHasCompletedBefore] = useState(false);
   const [agreementPercentage, setAgreementPercentage] = useState<number>(0);
@@ -156,9 +156,22 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
       return;
     }
 
-    // Check if both have completed all questions
+    // Check if BOTH users have completed ALL questions
+    const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
+    const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
+    
+    const user1Complete = stage1Questions.every(q => user1Ans[q.id] !== undefined);
+    const user2Complete = stage1Questions.every(q => user2Ans[q.id] !== undefined);
+    
+    if (!user1Complete || !user2Complete) {
+      // Not both finished yet - wait
+      return;
+    }
+
+    // Calculate scores
     let italianScore = 0;
     let hotpotScore = 0;
+    let sushiScore = 0;
     let matchingAnswers = 0;
 
     userIds.forEach(uid => {
@@ -169,13 +182,12 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
         if (option) {
           italianScore += option.points.italian;
           hotpotScore += option.points.hotpot;
+          sushiScore += option.points.sushi || 0;
         }
       });
     });
 
     // Calculate agreement percentage
-    const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
-    const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
     stage1Questions.forEach(q => {
       if (user1Ans[q.id] === user2Ans[q.id]) {
         matchingAnswers++;
@@ -183,15 +195,20 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
     });
     const agreement = Math.round((matchingAnswers / stage1Questions.length) * 100);
 
-    // Determine outcome (with deterministic tie-break using session code)
-    let result: 'italian' | 'hotpot';
-    if (italianScore > hotpotScore) {
+    // Determine outcome (highest score wins, with deterministic tie-break)
+    let result: 'italian' | 'hotpot' | 'sushi';
+    const maxScore = Math.max(italianScore, hotpotScore, sushiScore);
+    
+    if (maxScore === italianScore && italianScore > hotpotScore && italianScore > sushiScore) {
       result = 'italian';
-    } else if (hotpotScore > italianScore) {
+    } else if (maxScore === hotpotScore && hotpotScore > italianScore && hotpotScore > sushiScore) {
       result = 'hotpot';
+    } else if (maxScore === sushiScore && sushiScore > italianScore && sushiScore > hotpotScore) {
+      result = 'sushi';
     } else {
-      // Tie-break: use session code parity
-      result = parseInt(code) % 2 === 0 ? 'italian' : 'hotpot';
+      // Tie-break: use session code modulo 3
+      const codeNum = parseInt(code) % 3;
+      result = codeNum === 0 ? 'italian' : codeNum === 1 ? 'hotpot' : 'sushi';
     }
 
     // Save outcome and agreement to session (this will trigger both users' listeners)
@@ -213,7 +230,7 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
           </p>
           <div className="bg-white/10 border-4 border-white/30 p-4">
             <p className="text-white text-xs">
-              Za chwilę zobaczycie razem wynik! 🍕🍲
+              Za chwilę zobaczycie razem wynik! 🍕🍲🍣
             </p>
           </div>
           <button onClick={onComplete} className="text-pink-200 text-sm hover:text-white">
@@ -277,7 +294,9 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
               <div className="mt-6 p-4 bg-gradient-to-r from-yellow-400 to-orange-500 border-4 border-yellow-600 text-center">
                 <p className="text-black font-bold text-lg mb-2">DECYZJA:</p>
                 <p className="text-2xl font-bold text-black">
-                  {outcome === 'italian' ? '🍕 WŁOSKIE!' : '🍲 HOT POT!'}
+                  {outcome === 'italian' && '🍕 WŁOSKIE!'}
+                  {outcome === 'hotpot' && '🍲 HOT POT!'}
+                  {outcome === 'sushi' && '🍣 SUSHI!'}
                 </p>
               </div>
             )}
