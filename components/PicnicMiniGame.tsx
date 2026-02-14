@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface PicnicMiniGameProps {
   onComplete: (score: number) => void;
@@ -8,96 +8,86 @@ interface PicnicMiniGameProps {
 
 const foodItems = ['🧀', '🥖', '🍷', '🍇', '🥐', '🥗', '🍓', '🍰'];
 
+// Round configs: [sequenceLength per round]
+const roundConfigs = [3, 3, 4, 5];
+const maxRounds = roundConfigs.length;
+
 export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
-  const [gameState, setGameState] = useState<'ready' | 'memorize' | 'playing' | 'finished'>('ready');
+  const [gameState, setGameState] = useState<'ready' | 'memorize' | 'playing' | 'result' | 'finished'>('ready');
   const [targetSequence, setTargetSequence] = useState<string[]>([]);
   const [playerSequence, setPlayerSequence] = useState<string[]>([]);
-  const [round, setRound] = useState(1);
+  const [round, setRound] = useState(0); // 0-indexed
   const [score, setScore] = useState(0);
-  const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
-
-  const maxRounds = 5;
+  const [roundResult, setRoundResult] = useState<'correct' | 'wrong' | null>(null);
 
   const generateSequence = (length: number) => {
     const sequence: string[] = [];
+    const available = [...foodItems];
     for (let i = 0; i < length; i++) {
-      const randomItem = foodItems[Math.floor(Math.random() * foodItems.length)];
-      sequence.push(randomItem);
+      const idx = Math.floor(Math.random() * available.length);
+      sequence.push(available[idx]);
+      available.splice(idx, 1); // no duplicates
     }
     return sequence;
   };
 
-
-  const handleFoodClick = (food: string) => {
-    if (gameState !== 'playing') return;
-
-    const newPlayerSequence = [...playerSequence, food];
-    setPlayerSequence(newPlayerSequence);
-
-    // Check if this item is correct
-    if (food !== targetSequence[playerSequence.length]) {
-      // Wrong!
-      setShowFeedback('wrong');
-      setTimeout(() => {
-        setRound(prev => {
-          const nextRound = prev + 1;
-          if (nextRound <= maxRounds) {
-            startNewRoundWithNumber(nextRound);
-          } else {
-            finishGame();
-          }
-          return nextRound;
-        });
-      }, 1500);
-      return;
-    }
-
-    // Check if sequence is complete
-    if (newPlayerSequence.length === targetSequence.length) {
-      // Correct!
-      setShowFeedback('correct');
-      const points = 100;
-      setScore(prev => prev + points);
-      
-      setTimeout(() => {
-        setRound(prev => {
-          const nextRound = prev + 1;
-          if (nextRound <= maxRounds) {
-            startNewRoundWithNumber(nextRound);
-          } else {
-            finishGame();
-          }
-          return nextRound;
-        });
-      }, 1500);
-    }
-  };
-
-  const startNewRoundWithNumber = (roundNum: number) => {
-    const sequenceLength = roundNum + 2;
-    const newSequence = generateSequence(sequenceLength);
+  const startRound = (roundIndex: number) => {
+    const seqLength = roundConfigs[roundIndex];
+    const newSequence = generateSequence(seqLength);
     setTargetSequence(newSequence);
     setPlayerSequence([]);
+    setRoundResult(null);
+    setRound(roundIndex);
     setGameState('memorize');
-    setShowFeedback(null);
-
-    setTimeout(() => {
-      setGameState('playing');
-    }, 2000 + sequenceLength * 500);
   };
 
-  const finishGame = () => {
-    setGameState('finished');
-    setTimeout(() => {
-      setScore(currentScore => {
-        onComplete(Math.round((currentScore / (maxRounds * 100)) * 100));
-        return currentScore;
-      });
-    }, 2000);
+  const handleReadyToAnswer = () => {
+    setGameState('playing');
+  };
+
+  const handleFoodClick = (food: string) => {
+    if (gameState !== 'playing' || roundResult) return;
+    const newPlayerSequence = [...playerSequence, food];
+    setPlayerSequence(newPlayerSequence);
+  };
+
+  const handleUndo = () => {
+    if (gameState !== 'playing' || roundResult || playerSequence.length === 0) return;
+    setPlayerSequence(prev => prev.slice(0, -1));
+  };
+
+  const handleSubmit = () => {
+    if (playerSequence.length !== targetSequence.length) return;
+
+    const isCorrect = playerSequence.every((food, i) => food === targetSequence[i]);
+    if (isCorrect) {
+      setRoundResult('correct');
+      setScore(prev => prev + 100);
+    } else {
+      setRoundResult('wrong');
+    }
+    setGameState('result');
+  };
+
+  const handleNextRound = () => {
+    const nextRound = round + 1;
+    if (nextRound < maxRounds) {
+      startRound(nextRound);
+    } else {
+      setGameState('finished');
+      // Read final score via functional updater to get current value
+      setTimeout(() => {
+        setScore(currentScore => {
+          const finalScore = Math.round((currentScore / (maxRounds * 100)) * 100);
+          onComplete(finalScore);
+          return currentScore;
+        });
+      }, 2000);
+    }
   };
 
   const handleStart = () => {
-    startNewRoundWithNumber(1);
+    startRound(0);
   };
 
   if (gameState === 'ready') {
@@ -115,7 +105,7 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
                 Zapamiętaj kolejność jedzenia i ułóż je tak samo na kocu!
               </p>
               <p className="text-pink-200 text-sm">
-                Każda runda będzie coraz trudniejsza 🍷
+                {maxRounds} rundy, coraz trudniejsze 🍷
               </p>
               <button onClick={handleStart} className="retro-button">
                 ZACZNIJ PIKNIK
@@ -136,8 +126,8 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
             <h2 className="text-3xl font-bold text-white mb-4">Piknik zakończony!</h2>
             <div className="text-6xl font-bold text-pink-400">{finalScore}</div>
             <p className="text-white mt-4">
-              {finalScore >= 80 ? '🍾 Perfekcyjny piknik!' :
-               finalScore >= 60 ? '🧀 Pyszna zabawa!' :
+              {finalScore >= 75 ? '🍾 Perfekcyjny piknik!' :
+               finalScore >= 50 ? '🧀 Pyszna zabawa!' :
                '🍷 Smaczne było!'}
             </p>
             <p className="text-pink-200 text-sm mt-2">Zapisuję wynik...</p>
@@ -152,27 +142,26 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white mb-2">🧺 Piknik w Domu</h2>
-          <p className="text-pink-200 text-sm">Runda {round}/{maxRounds}</p>
+          <p className="text-pink-200 text-sm">Runda {round + 1}/{maxRounds}</p>
         </div>
 
         <div className="bg-white/10 border-4 border-white/30 p-6">
+          {/* Memorize phase */}
           {gameState === 'memorize' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <p className="text-white text-center font-bold">Zapamiętaj kolejność:</p>
-              <div className="flex justify-center gap-2 flex-wrap min-h-[80px] items-center">
+              <div className="flex justify-center gap-3 flex-wrap min-h-[80px] items-center">
                 {targetSequence.map((food, index) => (
-                  <div 
-                    key={index}
-                    className="text-5xl animate-bounce"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    {food}
-                  </div>
+                  <div key={index} className="text-5xl">{food}</div>
                 ))}
               </div>
+              <button onClick={handleReadyToAnswer} className="retro-button w-full">
+                Zapamiętałem! ▶
+              </button>
             </div>
           )}
 
+          {/* Playing phase */}
           {gameState === 'playing' && (
             <div className="space-y-4">
               <p className="text-white text-center font-bold">
@@ -182,9 +171,7 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
               {/* Player's sequence */}
               <div className="flex justify-center gap-2 flex-wrap min-h-[60px] items-center bg-orange-900/30 p-3 rounded border-2 border-orange-500">
                 {playerSequence.map((food, index) => (
-                  <div key={index} className="text-4xl">
-                    {food}
-                  </div>
+                  <div key={index} className="text-4xl">{food}</div>
                 ))}
                 {playerSequence.length === 0 && (
                   <p className="text-orange-300 text-sm">Wybierz jedzenie poniżej...</p>
@@ -197,22 +184,66 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
                   <button
                     key={index}
                     onClick={() => handleFoodClick(food)}
-                    className="text-5xl hover:scale-110 transition-transform bg-white/10 p-3 rounded border-2 border-white/30 hover:border-pink-400"
+                    disabled={playerSequence.length >= targetSequence.length}
+                    className="text-5xl hover:scale-110 transition-transform bg-white/10 p-3 rounded border-2 border-white/30 hover:border-pink-400 disabled:opacity-30 disabled:hover:scale-100"
                   >
                     {food}
                   </button>
                 ))}
               </div>
 
-              {showFeedback && (
-                <div className="text-center mt-4">
-                  <p className={`text-2xl font-bold ${
-                    showFeedback === 'correct' ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {showFeedback === 'correct' ? '✓ Idealnie!' : '✗ Ups, nie ta kolejność!'}
-                  </p>
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                {playerSequence.length > 0 && (
+                  <button onClick={handleUndo} className="retro-button flex-1 text-sm bg-gray-500">
+                    ← Cofnij
+                  </button>
+                )}
+                {playerSequence.length === targetSequence.length && (
+                  <button onClick={handleSubmit} className="retro-button flex-1">
+                    Zatwierdź ✓
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Result phase */}
+          {gameState === 'result' && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className={`text-3xl font-bold ${
+                  roundResult === 'correct' ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {roundResult === 'correct' ? '✓ Idealnie!' : '✗ Ups, nie ta kolejność!'}
+                </p>
+              </div>
+
+              {/* Show correct vs player answer */}
+              <div className="space-y-2">
+                <div className="text-center">
+                  <p className="text-pink-200 text-xs mb-1">Poprawna kolejność:</p>
+                  <div className="flex justify-center gap-2">
+                    {targetSequence.map((food, i) => (
+                      <span key={i} className="text-3xl">{food}</span>
+                    ))}
+                  </div>
                 </div>
-              )}
+                <div className="text-center">
+                  <p className="text-pink-200 text-xs mb-1">Twoja kolejność:</p>
+                  <div className="flex justify-center gap-2">
+                    {playerSequence.map((food, i) => (
+                      <span key={i} className={`text-3xl ${
+                        food === targetSequence[i] ? '' : 'opacity-40'
+                      }`}>{food}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={handleNextRound} className="retro-button w-full">
+                {round + 1 < maxRounds ? 'Następna runda ▶' : 'Podsumowanie ▶'}
+              </button>
             </div>
           )}
         </div>
