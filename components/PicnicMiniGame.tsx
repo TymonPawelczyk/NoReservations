@@ -95,13 +95,13 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-pink-900 to-red-900">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-2">🧺 Piknik w Domu</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🧺 Piknik w Domu</h2>
             <p className="text-pink-200 text-sm">Ułóż jedzenie na kocu!</p>
           </div>
 
-          <div className="bg-white/10 border-4 border-white/30 p-8">
+          <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-8">
             <div className="text-center space-y-6">
-              <p className="text-white text-lg">
+              <p className="text-white text-sm sm:text-lg">
                 Zapamiętaj kolejność jedzenia i ułóż je tak samo na kocu!
               </p>
               <p className="text-pink-200 text-sm">
@@ -123,7 +123,7 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-pink-900 to-red-900">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-4">Piknik zakończony!</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-4">Piknik zakończony!</h2>
             <div className="text-6xl font-bold text-pink-400">{finalScore}</div>
             <p className="text-white mt-4">
               {finalScore >= 75 ? '🍾 Perfekcyjny piknik!' :
@@ -141,18 +141,18 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
     <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-pink-900 to-red-900">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white mb-2">🧺 Piknik w Domu</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🧺 Piknik w Domu</h2>
           <p className="text-pink-200 text-sm">Runda {round + 1}/{maxRounds}</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-6">
+        <div className="bg-white/10 border-4 border-white/30 p-3 sm:p-6">
           {/* Memorize phase */}
           {gameState === 'memorize' && (
             <div className="space-y-6">
               <p className="text-white text-center font-bold">Zapamiętaj kolejność:</p>
               <div className="flex justify-center gap-3 flex-wrap min-h-[80px] items-center">
                 {targetSequence.map((food, index) => (
-                  <div key={index} className="text-5xl">{food}</div>
+                  <div key={index} className="text-3xl sm:text-5xl">{food}</div>
                 ))}
               </div>
               <button onClick={handleReadyToAnswer} className="retro-button w-full">
@@ -171,7 +171,7 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
               {/* Player's sequence */}
               <div className="flex justify-center gap-2 flex-wrap min-h-[60px] items-center bg-orange-900/30 p-3 rounded border-2 border-orange-500">
                 {playerSequence.map((food, index) => (
-                  <div key={index} className="text-4xl">{food}</div>
+                  <div key={index} className="text-2xl sm:text-4xl">{food}</div>
                 ))}
                 {playerSequence.length === 0 && (
                   <p className="text-orange-300 text-sm">Wybierz jedzenie poniżej...</p>
@@ -185,7 +185,7 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
                     key={index}
                     onClick={() => handleFoodClick(food)}
                     disabled={playerSequence.length >= targetSequence.length}
-                    className="text-5xl hover:scale-110 transition-transform bg-white/10 p-3 rounded border-2 border-white/30 hover:border-pink-400 disabled:opacity-30 disabled:hover:scale-100"
+                    className="text-3xl sm:text-5xl hover:scale-110 transition-transform bg-white/10 p-2 sm:p-3 rounded border-2 border-white/30 hover:border-pink-400 disabled:opacity-30 disabled:hover:scale-100"
                   >
                     {food}
                   </button>

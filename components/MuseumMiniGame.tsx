@@ -64,12 +64,12 @@ export default function MuseumMiniGame({ onComplete }: MuseumMiniGameProps) {
     <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-purple-900 to-indigo-900">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white mb-2">🎨 Quiz Muzealny</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🎨 Quiz Muzealny</h2>
           <p className="text-pink-200 text-sm">Pytanie {currentQuestion + 1}/{artQuestions.length}</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-8">
-          <h3 className="text-white text-xl font-bold mb-6 text-center">{question.question}</h3>
+        <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-8">
+          <h3 className="text-white text-base sm:text-xl font-bold mb-4 sm:mb-6 text-center">{question.question}</h3>
 
           <div className="space-y-3">
             {question.options.map((option, index) => {

@@ -118,13 +118,13 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-green-900 to-teal-900">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-2">🚶 Spacer po Parku</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🚶 Spacer po Parku</h2>
             <p className="text-pink-200 text-sm">Zbieraj niespodzianki!</p>
           </div>
 
-          <div className="bg-white/10 border-4 border-white/30 p-8">
+          <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-8">
             <div className="text-center space-y-6">
-              <p className="text-white text-lg">
+              <p className="text-white text-sm sm:text-lg">
                 Kliknij ekran gdy tylko zobaczysz niespodziankę podczas spaceru!
               </p>
               <p className="text-pink-200 text-sm">
@@ -149,7 +149,7 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-green-900 to-teal-900">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-4">Koniec spaceru!</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-4">Koniec spaceru!</h2>
             <div className="text-6xl font-bold text-green-400">{finalScore}</div>
             <p className="text-white mt-4">
               {finalScore >= 80 ? '🌟 Świetny refleks!' :
@@ -167,13 +167,13 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
     <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-green-900 to-teal-900">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white mb-2">🚶 Spacer po Parku</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🚶 Spacer po Parku</h2>
           <p className="text-pink-200 text-sm">Runda {Math.min(currentRound + 1, totalRounds)}/{totalRounds}</p>
         </div>
 
         <div 
           onClick={handleClick}
-          className="bg-white/10 border-4 border-white/30 p-12 cursor-pointer hover:bg-white/20 transition-all min-h-[300px] flex items-center justify-center"
+          className="bg-white/10 border-4 border-white/30 p-6 sm:p-12 cursor-pointer hover:bg-white/20 transition-all min-h-[200px] sm:min-h-[300px] flex items-center justify-center"
         >
           {showScenery ? (
             <div className="text-center">

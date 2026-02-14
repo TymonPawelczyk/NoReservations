@@ -115,13 +115,13 @@ export default function PoolMiniGame({ onComplete }: PoolMiniGameProps) {
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-blue-900 to-cyan-900">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-2">🏊 Basen - Skoki</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🏊 Basen - Skoki</h2>
             <p className="text-pink-200 text-sm">Synchronizuj skoki z falami!</p>
           </div>
 
-          <div className="bg-white/10 border-4 border-white/30 p-8">
+          <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-8">
             <div className="text-center space-y-6">
-              <p className="text-white text-lg">
+              <p className="text-white text-sm sm:text-lg">
                 Skacz do wody gdy fala jest w środku (niebieska strefa)!
               </p>
               <p className="text-pink-200 text-sm">
@@ -143,7 +143,7 @@ export default function PoolMiniGame({ onComplete }: PoolMiniGameProps) {
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-blue-900 to-cyan-900">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-4">Koniec zabawy w basenie!</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-white mb-4">Koniec zabawy w basenie!</h2>
             <div className="text-6xl font-bold text-cyan-400">{finalScore}</div>
             <p className="text-white mt-4">
               {finalScore >= 80 ? '🏆 Olimpijski skoczek!' :
@@ -161,11 +161,11 @@ export default function PoolMiniGame({ onComplete }: PoolMiniGameProps) {
     <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-blue-900 to-cyan-900">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white mb-2">🏊 Basen - Skoki</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🏊 Basen - Skoki</h2>
           <p className="text-pink-200 text-sm">Skok {jumps}/{totalJumps}</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-8">
+        <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-8">
           {/* Wave indicator */}
           <div className="relative h-24 bg-blue-800 border-4 border-blue-900 rounded-lg overflow-hidden mb-6">
             {/* Perfect zone (middle) */}
