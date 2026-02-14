@@ -8,11 +8,11 @@ interface ConfirmExitModalProps {
 export default function ConfirmExitModal({ onConfirm, onCancel }: ConfirmExitModalProps) {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-gradient-to-b from-purple-900 to-pink-900 border-4 border-yellow-400 max-w-md w-full p-6 space-y-4 animate-pulse-once">
+      <div className="bg-gradient-to-b from-purple-900 to-pink-900 border-4 border-yellow-400 max-w-md w-full p-4 sm:p-6 space-y-4 animate-pulse-once overflow-y-auto max-h-[90vh]">
         <div className="text-center">
-          <div className="text-6xl mb-4">😱</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Ratunku!</h2>
-          <p className="text-yellow-300 font-bold text-lg mb-2">
+          <div className="text-4xl sm:text-6xl mb-4">😱</div>
+          <h2 className="text-lg sm:text-2xl font-bold text-white mb-2">Ratunku!</h2>
+          <p className="text-yellow-300 font-bold text-base sm:text-lg mb-2">
             Chcesz nas zostawić?
           </p>
           <p className="text-pink-200 text-sm mb-4">
