@@ -73,15 +73,33 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
       if (snapshot.exists()) {
         const sessionData = snapshot.data();
         if (sessionData.outcomes?.stage2) {
-          const outcome = sessionData.outcomes.stage2 as Activity;
-          setFinalActivity(outcome);
-          
+      const outcome = sessionData.outcomes.stage2;
+      
+      // Check for cinema easter egg
+      if (outcome === 'cinema') {
+        setShowEasterEgg(true);
+        setShowComparison(true);
+        return;
+      }
+      
+      setFinalActivity(outcome as Activity);
           // If bowling wins and we haven't played the mini-game yet
           if (outcome === 'bowling' && finishedAnswering && !miniGameScore && !showMiniGame && !showComparison) {
             setShowMiniGame(true);
           } else if (finishedAnswering) {
             setShowComparison(true);
           }
+        } else if (showEasterEgg && showComparison) {
+          // Outcome was deleted (partner clicked back from cinema easter egg)
+          setShowEasterEgg(false);
+          setShowComparison(false);
+          setFinishedAnswering(false);
+          setCurrentQ(4);
+          
+          // Clear q5 answer
+          const newAnswers = { ...answers };
+          delete newAnswers['q5'];
+          setAnswers(newAnswers);
         }
 
         // Get agreement percentage
@@ -105,7 +123,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     });
 
     return () => unsubscribe();
-  }, [code, userId, finishedAnswering, miniGameScore, showMiniGame, showComparison]);
+  }, [code, userId, finishedAnswering, miniGameScore, showMiniGame, showComparison, showEasterEgg, answers]);
 
   const requestReset = async () => {
     await updateDoc(doc(db, 'sessions', code), {
@@ -171,6 +189,15 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
     const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
     
     if (!stage2Questions.every(q => user1Ans[q.id] && user2Ans[q.id])) return;
+
+    // Check for cinema easter egg (if anyone chose cinema in q5)
+    if (user1Ans['q5'] === 'cinema' || user2Ans['q5'] === 'cinema') {
+      // Save 'cinema' as outcome so both users get notified via listener
+      await updateDoc(doc(db, 'sessions', code), {
+        'outcomes.stage2': 'cinema',
+      });
+      return;
+    }
 
     // Calculate scores
     let scores = { museum: 0, funhouse: 0, bowling: 0, pool: 0 };
@@ -256,6 +283,70 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
           <div className="text-6xl mb-4 animate-bounce">⏳</div>
           <h2 className="text-2xl font-bold text-white">Obliczanie wspólnej pasji...</h2>
           <p className="text-pink-200">Czekam, aż partner dokończy wybór.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Easter egg - Cinema rejection
+  if (showEasterEgg && showComparison) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="max-w-md w-full space-y-6">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🎬</div>
+            <h2 className="text-3xl font-bold text-white mb-4">Kino? Serio?</h2>
+          </div>
+
+          <div className="bg-red-500/20 border-4 border-red-500 p-6 space-y-4">
+            <SpeechBubble 
+              text="Chyba żartujesz?? Nuuuda! 😴"
+              autoCloseDuration={0}
+            />
+
+            <div className="text-center space-y-3">
+              <p className="text-white text-sm">
+                Przecież możemy obejrzeć film w domu pod kocem! 
+                To miała być randka pełna akcji!
+              </p>
+              <div className="text-4xl">🍿❌</div>
+              <p className="text-pink-300 text-xs italic">
+                (Wybierzcie coś bardziej interesującego!)
+              </p>
+            </div>
+          </div>
+
+          <button 
+            onClick={async () => {
+              setShowEasterEgg(false);
+              setShowComparison(false);
+              setFinishedAnswering(false);
+              setCurrentQ(4); // Wróć do ostatniego pytania
+              
+              // Clear q5 answer so user can choose again
+              const newAnswers = { ...answers };
+              delete newAnswers['q5'];
+              setAnswers(newAnswers);
+              
+              // Clear outcome from Firestore so both users can re-answer
+              await updateDoc(doc(db, 'sessions', code), {
+                'outcomes.stage2': deleteField(),
+              });
+              
+              await setDoc(doc(db, 'answers', code, 'stage2', 'data'), {
+                [userId]: {
+                  answers: newAnswers,
+                },
+              }, { merge: true });
+            }}
+            className="retro-button w-full bg-yellow-500 hover:bg-yellow-600"
+          >
+            😅 Ups, wybierzmy coś innego!
+          </button>
+
+          <button onClick={onComplete} className="text-center text-pink-200 text-sm hover:text-white w-full">
+            ← Powrót do mapy
+          </button>
         </div>
       </div>
     );

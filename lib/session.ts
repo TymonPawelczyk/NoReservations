@@ -10,8 +10,11 @@ export interface SessionData {
   ready: Record<string, boolean>; // uid -> ready status
   participants: Record<string, Participant>;
   outcomes?: {
-    stage1?: 'italian' | 'hotpot';
-    stage2?: 'museum' | 'funhouse' | 'bowling' | 'pool';
+    stage1?: 'italian' | 'hotpot' | 'sushi';
+    stage2?: 'museum' | 'funhouse' | 'bowling' | 'pool' | 'cinema';
+  };
+  outcomeData?: {
+    stage1Agreement?: number;
   };
   resetRequests?: {
     stage1?: Record<string, boolean>;
