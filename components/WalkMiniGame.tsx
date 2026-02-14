@@ -24,7 +24,7 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
   const startNextRound = () => {
     if (currentRound >= totalRounds) {
       setGameState('finished');
-      const finalScore = Math.round((score / totalRounds) * 100);
+      const finalScore = Math.round((score / (totalRounds * 100)) * 100);
       setTimeout(() => {
         onComplete(finalScore);
       }, 2000);
@@ -137,7 +137,7 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
   }
 
   if (gameState === 'finished') {
-    const finalScore = Math.round((score / totalRounds) * 100);
+    const finalScore = Math.round((score / (totalRounds * 100)) * 100);
     return (
       <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-green-900 to-teal-900">
         <div className="max-w-md w-full space-y-6">
@@ -183,7 +183,7 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
               }`}>
                 {roundResult === 'great' && '⚡ Błyskawiczny!'}
                 {roundResult === 'good' && '👍 Dobrze!'}
-                {roundResult === 'slow' && '🐢 Wolniej...'}
+                {roundResult === 'slow' && '🐢 Szybciej...'}
                 {roundResult === 'early' && '❌ Za wcześnie! -20'}
               </p>
               {reactionTime !== null && roundResult !== 'early' && (
@@ -198,7 +198,7 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
         </div>
 
         <div className="text-center">
-          <p className="text-white">Wynik: {Math.round((score / totalRounds) * 100)}</p>
+          <p className="text-white">Wynik: {Math.round((score / (totalRounds * 100)) * 100)}</p>
         </div>
       </div>
     </div>
