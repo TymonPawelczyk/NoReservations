@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, deleteDoc, deleteField } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, deleteDoc, deleteField, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { stage1Questions } from '@/lib/questions';
 import { AnswersData } from '@/lib/session';
@@ -144,78 +144,95 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
   };
 
   const calculateOutcome = async (userAnswers: Record<string, string>) => {
-    // Wait for partner answers
-    const answersDoc = await getDoc(doc(db, 'answers', code, 'stage1', 'data'));
-    if (!answersDoc.exists()) return;
-
-    const allAnswers = answersDoc.data() as AnswersData;
-    const userIds = Object.keys(allAnswers);
-
-    if (userIds.length < 2) {
-      // Partner hasn't joined yet - just wait for them
-      return;
-    }
-
-    // Check if BOTH users have completed ALL questions
-    const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
-    const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
-    
-    const user1Complete = stage1Questions.every(q => user1Ans[q.id] !== undefined);
-    const user2Complete = stage1Questions.every(q => user2Ans[q.id] !== undefined);
-    
-    if (!user1Complete || !user2Complete) {
-      // Not both finished yet - wait
-      return;
-    }
-
-    // Calculate scores
-    let italianScore = 0;
-    let hotpotScore = 0;
-    let sushiScore = 0;
-    let matchingAnswers = 0;
-
-    userIds.forEach(uid => {
-      const userAns = allAnswers[uid].answers as Record<string, string>;
-      stage1Questions.forEach(q => {
-        const answer = userAns[q.id];
-        const option = q.options.find(o => o.value === answer);
-        if (option) {
-          italianScore += option.points.italian;
-          hotpotScore += option.points.hotpot;
-          sushiScore += option.points.sushi || 0;
+    try {
+      await runTransaction(db, async (transaction) => {
+        const sessionRef = doc(db, 'sessions', code);
+        const sessionDoc = await transaction.get(sessionRef);
+        
+        // Check if outcome already exists - if yes, skip calculation
+        if (sessionDoc.exists() && sessionDoc.data().outcomes?.stage1) {
+          return; // Already calculated by the other user
         }
+
+        // Wait for partner answers
+        const answersRef = doc(db, 'answers', code, 'stage1', 'data');
+        const answersDoc = await transaction.get(answersRef);
+        if (!answersDoc.exists()) return;
+
+        const allAnswers = answersDoc.data() as AnswersData;
+        const userIds = Object.keys(allAnswers);
+
+        if (userIds.length < 2) {
+          // Partner hasn't joined yet - just wait for them
+          return;
+        }
+
+        // Check if BOTH users have completed ALL questions
+        const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
+        const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
+        
+        const user1Complete = stage1Questions.every(q => user1Ans[q.id] !== undefined);
+        const user2Complete = stage1Questions.every(q => user2Ans[q.id] !== undefined);
+        
+        if (!user1Complete || !user2Complete) {
+          // Not both finished yet - wait
+          return;
+        }
+
+        // Calculate scores
+        let italianScore = 0;
+        let hotpotScore = 0;
+        let sushiScore = 0;
+        let matchingAnswers = 0;
+
+        userIds.forEach(uid => {
+          const userAns = allAnswers[uid].answers as Record<string, string>;
+          stage1Questions.forEach(q => {
+            const answer = userAns[q.id];
+            const option = q.options.find(o => o.value === answer);
+            if (option) {
+              italianScore += option.points.italian;
+              hotpotScore += option.points.hotpot;
+              sushiScore += option.points.sushi || 0;
+            }
+          });
+        });
+
+        // Calculate agreement percentage
+        stage1Questions.forEach(q => {
+          if (user1Ans[q.id] === user2Ans[q.id]) {
+            matchingAnswers++;
+          }
+        });
+        const agreement = Math.round((matchingAnswers / stage1Questions.length) * 100);
+
+        // Determine outcome (highest score wins, with deterministic tie-break)
+        let result: 'italian' | 'hotpot' | 'sushi';
+        const maxScore = Math.max(italianScore, hotpotScore, sushiScore);
+        
+        if (maxScore === italianScore && italianScore > hotpotScore && italianScore > sushiScore) {
+          result = 'italian';
+        } else if (maxScore === hotpotScore && hotpotScore > italianScore && hotpotScore > sushiScore) {
+          result = 'hotpot';
+        } else if (maxScore === sushiScore && sushiScore > italianScore && sushiScore > hotpotScore) {
+          result = 'sushi';
+        } else {
+          // Tie-break: use session code modulo 3
+          const codeNum = parseInt(code) % 3;
+          result = codeNum === 0 ? 'italian' : codeNum === 1 ? 'hotpot' : 'sushi';
+        }
+
+        // Save outcome and agreement to session (this will trigger both users' listeners)
+        transaction.update(sessionRef, {
+          'outcomes.stage1': result,
+          'outcomeData.stage1Agreement': agreement,
+        });
       });
-    });
-
-    // Calculate agreement percentage
-    stage1Questions.forEach(q => {
-      if (user1Ans[q.id] === user2Ans[q.id]) {
-        matchingAnswers++;
-      }
-    });
-    const agreement = Math.round((matchingAnswers / stage1Questions.length) * 100);
-
-    // Determine outcome (highest score wins, with deterministic tie-break)
-    let result: 'italian' | 'hotpot' | 'sushi';
-    const maxScore = Math.max(italianScore, hotpotScore, sushiScore);
-    
-    if (maxScore === italianScore && italianScore > hotpotScore && italianScore > sushiScore) {
-      result = 'italian';
-    } else if (maxScore === hotpotScore && hotpotScore > italianScore && hotpotScore > sushiScore) {
-      result = 'hotpot';
-    } else if (maxScore === sushiScore && sushiScore > italianScore && sushiScore > hotpotScore) {
-      result = 'sushi';
-    } else {
-      // Tie-break: use session code modulo 3
-      const codeNum = parseInt(code) % 3;
-      result = codeNum === 0 ? 'italian' : codeNum === 1 ? 'hotpot' : 'sushi';
+    } catch (error) {
+      console.error('Error calculating outcome:', error);
+      // Transaction failed - might be because outcome was already set by the other user
+      // This is OK, the listener will pick it up
     }
-
-    // Save outcome and agreement to session (this will trigger both users' listeners)
-    await updateDoc(doc(db, 'sessions', code), {
-      'outcomes.stage1': result,
-      'outcomeData.stage1Agreement': agreement,
-    });
   };
 
   // Waiting screen (when finished but partner hasn't)

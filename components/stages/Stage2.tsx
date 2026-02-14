@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, updateDoc, getDoc, deleteDoc, deleteField, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { stage2Questions } from '@/lib/questions';
 import { AnswersData } from '@/lib/session';
@@ -46,7 +46,7 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
         if (userData?.answers && Object.keys(userData.answers).length === stage2Questions.length) {
           // User already completed - load their data
           setAnswers(userData.answers as Record<string, string>);
-          setMiniGameScore(userData.miniGameScore || null);
+          setMiniGameScore(userData.miniGameScore ?? null);
           setFinishedAnswering(true);
           setHasCompletedBefore(true);
         }
@@ -93,24 +93,35 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
       
       setFinalActivity(outcome as Activity);
           // Show mini-game for any activity (except cinema) if we haven't played yet
-          if (outcome !== 'cinema' && finishedAnswering && !miniGameScore && !showMiniGame && !showComparison) {
+          if (outcome !== 'cinema' && finishedAnswering && miniGameScore === null && !showMiniGame && !showComparison) {
             setShowMiniGame(true);
           } else if (finishedAnswering) {
             setShowComparison(true);
           }
         } else {
-          // No outcome yet
-          if (showEasterEgg && showComparison) {
-            // Outcome was deleted (partner clicked back from cinema easter egg)
+          // No outcome yet — could mean Easter egg was dismissed by either user
+          if (showEasterEgg || showComparison || finalActivity) {
+            // Outcome was deleted (easter egg reset or other reset)
             setShowEasterEgg(false);
             setShowComparison(false);
-            setFinishedAnswering(false);
-            setCurrentQ(4);
+            setShowMiniGame(false);
+            setFinalActivity(null);
             
-            // Clear q5 answer
-            const newAnswers = { ...answers };
-            delete newAnswers['q5'];
-            setAnswers(newAnswers);
+            // Check if our q5 answer was cleared in Firestore
+            // If so, go back to q5
+            getDoc(doc(db, 'answers', code, 'stage2', 'data')).then(snap => {
+              if (snap.exists()) {
+                const data = snap.data() as AnswersData;
+                const myData = data[userId];
+                if (!myData?.answers?.['q5']) {
+                  setFinishedAnswering(false);
+                  setCurrentQ(4);
+                  const newAnswers = { ...answers };
+                  delete newAnswers['q5'];
+                  setAnswers(newAnswers);
+                }
+              }
+            });
           }
         }
 
@@ -188,69 +199,87 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
   };
 
   const calculateFinalActivity = async (userAnswers: Record<string, string>) => {
-    // Wait for partner answers
-    const answersDoc = await getDoc(doc(db, 'answers', code, 'stage2', 'data'));
-    if (!answersDoc.exists()) return;
-
-    const allAnswers = answersDoc.data() as AnswersData;
-    const userIds = Object.keys(allAnswers);
-
-    if (userIds.length < 2) return;
-
-    const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
-    const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
-    
-    if (!stage2Questions.every(q => user1Ans[q.id] && user2Ans[q.id])) return;
-
-    // Check for cinema easter egg (if anyone chose cinema in q5)
-    if (user1Ans['q5'] === 'cinema' || user2Ans['q5'] === 'cinema') {
-      // Save 'cinema' as outcome so both users get notified via listener
-      await updateDoc(doc(db, 'sessions', code), {
-        'outcomes.stage2': 'cinema',
-      });
-      return;
-    }
-
-    // Calculate scores
-    let scores = { museum: 0, walk: 0, bowling: 0, pool: 0, picnic: 0 };
-    let matchingAnswers = 0;
-
-    userIds.forEach(uid => {
-      const userAns = allAnswers[uid].answers as Record<string, string>;
-      stage2Questions.forEach(q => {
-        const answer = userAns[q.id];
-        const option = q.options.find(o => o.value === answer);
-        if (option && 'points' in option) {
-          const pts = option.points as any;
-          scores.museum += pts.museum || 0;
-          scores.walk += pts.walk || 0;
-          scores.bowling += pts.bowling || 0;
-          scores.pool += pts.pool || 0;
-          scores.picnic += pts.picnic || 0;
+    try {
+      // Use transaction to prevent race conditions
+      await runTransaction(db, async (transaction) => {
+        const sessionRef = doc(db, 'sessions', code);
+        const sessionDoc = await transaction.get(sessionRef);
+        
+        // Check if outcome already exists - if yes, skip calculation
+        if (sessionDoc.exists() && sessionDoc.data().outcomes?.stage2) {
+          return; // Already calculated by the other user
         }
+
+        // Wait for partner answers
+        const answersRef = doc(db, 'answers', code, 'stage2', 'data');
+        const answersDoc = await transaction.get(answersRef);
+        if (!answersDoc.exists()) return;
+
+        const allAnswers = answersDoc.data() as AnswersData;
+        const userIds = Object.keys(allAnswers);
+
+        if (userIds.length < 2) return;
+
+        const user1Ans = allAnswers[userIds[0]].answers as Record<string, string>;
+        const user2Ans = allAnswers[userIds[1]].answers as Record<string, string>;
+        
+        if (!stage2Questions.every(q => user1Ans[q.id] && user2Ans[q.id])) return;
+
+        // Check for cinema easter egg (if anyone chose cinema in q5)
+        if (user1Ans['q5'] === 'cinema' || user2Ans['q5'] === 'cinema') {
+          // Save 'cinema' as outcome so both users get notified via listener
+          transaction.update(sessionRef, {
+            'outcomes.stage2': 'cinema',
+          });
+          return;
+        }
+
+        // Calculate scores
+        let scores = { museum: 0, walk: 0, bowling: 0, pool: 0, picnic: 0 };
+        let matchingAnswers = 0;
+
+        userIds.forEach(uid => {
+          const userAns = allAnswers[uid].answers as Record<string, string>;
+          stage2Questions.forEach(q => {
+            const answer = userAns[q.id];
+            const option = q.options.find(o => o.value === answer);
+            if (option && 'points' in option) {
+              const pts = option.points as any;
+              scores.museum += pts.museum || 0;
+              scores.walk += pts.walk || 0;
+              scores.bowling += pts.bowling || 0;
+              scores.pool += pts.pool || 0;
+              scores.picnic += pts.picnic || 0;
+            }
+          });
+        });
+
+        stage2Questions.forEach(q => {
+          if (user1Ans[q.id] === user2Ans[q.id]) matchingAnswers++;
+        });
+        const agreement = Math.round((matchingAnswers / stage2Questions.length) * 100);
+
+        // Determine winner
+        let winner: Activity = 'museum';
+        let maxScore = -1;
+        (Object.entries(scores) as [Activity, number][]).forEach(([act, score]) => {
+          if (score > maxScore) {
+            maxScore = score;
+            winner = act;
+          }
+        });
+
+        // Save outcome
+        transaction.update(sessionRef, {
+          'outcomes.stage2': winner,
+          'outcomeData.stage2Agreement': agreement,
+        });
       });
-    });
-
-    stage2Questions.forEach(q => {
-      if (user1Ans[q.id] === user2Ans[q.id]) matchingAnswers++;
-    });
-    const agreement = Math.round((matchingAnswers / stage2Questions.length) * 100);
-
-    // Determine winner
-    let winner: Activity = 'museum';
-    let maxScore = -1;
-    (Object.entries(scores) as [Activity, number][]).forEach(([act, score]) => {
-      if (score > maxScore) {
-        maxScore = score;
-        winner = act;
-      }
-    });
-
-    // Save outcome
-    await updateDoc(doc(db, 'sessions', code), {
-      'outcomes.stage2': winner,
-      'outcomeData.stage2Agreement': agreement,
-    });
+    } catch (error) {
+      console.error('Error calculating final activity:', error);
+      // Transaction failed - might be because outcome was already set by the other user
+      // This is OK, the listener will pick it up
+    }
   };
 
   const handleActivitySelect = async (activity: Activity) => {
@@ -350,21 +379,32 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
               setFinishedAnswering(false);
               setCurrentQ(4); // Wróć do ostatniego pytania
               
-              // Clear q5 answer so user can choose again
+              // Clear q5 answer locally
               const newAnswers = { ...answers };
               delete newAnswers['q5'];
               setAnswers(newAnswers);
               
-              // Clear outcome from Firestore so both users can re-answer
+              // First: delete q5 from BOTH users' answers in Firestore
+              // Must use updateDoc + deleteField() — setDoc with merge:true won't delete omitted fields!
+              const answersRef = doc(db, 'answers', code, 'stage2', 'data');
+              const answersSnap = await getDoc(answersRef);
+              if (answersSnap.exists()) {
+                const allData = answersSnap.data() as AnswersData;
+                const deleteUpdates: Record<string, unknown> = {};
+                for (const uid of Object.keys(allData)) {
+                  if ((allData[uid]?.answers as Record<string, string>)?.['q5']) {
+                    deleteUpdates[`${uid}.answers.q5`] = deleteField();
+                  }
+                }
+                if (Object.keys(deleteUpdates).length > 0) {
+                  await updateDoc(answersRef, deleteUpdates);
+                }
+              }
+              
+              // Then: clear outcome — listener fires after q5 is already gone
               await updateDoc(doc(db, 'sessions', code), {
                 'outcomes.stage2': deleteField(),
               });
-              
-              await setDoc(doc(db, 'answers', code, 'stage2', 'data'), {
-                [userId]: {
-                  answers: newAnswers,
-                },
-              }, { merge: true });
             }}
             className="retro-button w-full bg-yellow-500 hover:bg-yellow-600"
           >
@@ -412,10 +452,10 @@ export default function Stage2({ code, userId, onComplete }: Stage2Props) {
               <div className="mt-4 p-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center border-4 border-blue-600">
                 <p className="text-lg font-bold">Zgodność: {agreementPercentage}%</p>
                 <p className="text-xs mt-1 opacity-80">
-                  {agreementPercentage >= 80 && '🎉 Niesamowita zgoda!'}
-                  {agreementPercentage >= 60 && agreementPercentage < 80 && '👍 Świetna zgodność!'}
-                  {agreementPercentage >= 40 && agreementPercentage < 60 && '😊 Dobra zgoda!'}
-                  {agreementPercentage < 40 && '🤔 Różne gusta!'}
+                  {agreementPercentage >= 80 ? '🎉 Niesamowita zgoda!' :
+                   agreementPercentage >= 60 ? '👍 Świetna zgodność!' :
+                   agreementPercentage >= 40 ? '😊 Dobra zgoda!' :
+                   '🤔 Różne gusta!'}
                 </p>
               </div>
             )}

@@ -21,10 +21,13 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
 
   const totalRounds = 5;
 
+  const scoreRef = useRef(0);
+  const roundRef = useRef(0);
+
   const startNextRound = () => {
-    if (currentRound >= totalRounds) {
+    if (roundRef.current >= totalRounds) {
       setGameState('finished');
-      const finalScore = Math.round((score / (totalRounds * 100)) * 100);
+      const finalScore = Math.round((scoreRef.current / (totalRounds * 100)) * 100);
       setTimeout(() => {
         onComplete(finalScore);
       }, 2000);
@@ -54,9 +57,11 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
       
       // Apply penalty
       const penalty = 20;
-      setScore(Math.max(0, score - penalty));
+      scoreRef.current = Math.max(0, scoreRef.current - penalty);
+      setScore(scoreRef.current);
       setRoundResult('early');
-      setCurrentRound(currentRound + 1);
+      roundRef.current += 1;
+      setCurrentRound(roundRef.current);
       
       setTimeout(() => {
         startNextRound();
@@ -84,9 +89,11 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
       result = 'slow';
     }
 
-    setScore(score + points);
+    scoreRef.current += points;
+    setScore(scoreRef.current);
     setRoundResult(result);
-    setCurrentRound(currentRound + 1);
+    roundRef.current += 1;
+    setCurrentRound(roundRef.current);
 
     setTimeout(() => {
       startNextRound();
@@ -161,7 +168,7 @@ export default function WalkMiniGame({ onComplete }: WalkMiniGameProps) {
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white mb-2">🚶 Spacer po Parku</h2>
-          <p className="text-pink-200 text-sm">Runda {currentRound + 1}/{totalRounds}</p>
+          <p className="text-pink-200 text-sm">Runda {Math.min(currentRound + 1, totalRounds)}/{totalRounds}</p>
         </div>
 
         <div 

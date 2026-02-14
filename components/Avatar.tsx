@@ -29,10 +29,10 @@ export default function Avatar({
     if (!animated) return;
 
     const interval = setInterval(() => {
-      // Randomly blink or change expression slightly
+      // Randomly blink (closed ~10% of the time)
       setCurrentEmotion(prev => {
         if (prev === 'closed') return emotion;
-        return Math.random() > 0.1 ? 'closed' : emotion;
+        return Math.random() < 0.1 ? 'closed' : emotion;
       });
     }, 1500);
 

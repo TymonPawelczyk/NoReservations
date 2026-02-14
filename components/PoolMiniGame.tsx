@@ -70,11 +70,11 @@ export default function PoolMiniGame({ onComplete }: PoolMiniGameProps) {
     if (currentPos >= 45 && currentPos <= 55) {
       success = true;
       feedbackText = '🌟 Perfekcyjny skok!';
-      setSuccessfulJumps(successfulJumps + 1);
+      setSuccessfulJumps(prev => prev + 1);
     } else if (currentPos >= 35 && currentPos <= 65) {
       success = true;
       feedbackText = '👍 Dobry skok!';
-      setSuccessfulJumps(successfulJumps + 1);
+      setSuccessfulJumps(prev => prev + 1);
     } else if (currentPos >= 25 && currentPos <= 75) {
       feedbackText = '😅 Prawie!';
     } else {
@@ -85,16 +85,19 @@ export default function PoolMiniGame({ onComplete }: PoolMiniGameProps) {
 
     if (newJumps >= totalJumps) {
       setTimeout(() => {
-        setGameState('finished');
-        const finalScore = Math.round((successfulJumps / totalJumps) * 100);
-        
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
+        setSuccessfulJumps(currentSuccessful => {
+          const finalScore = Math.round((currentSuccessful / totalJumps) * 100);
+          setGameState('finished');
+          
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+          }
 
-        setTimeout(() => {
-          onComplete(finalScore);
-        }, 2000);
+          setTimeout(() => {
+            onComplete(finalScore);
+          }, 2000);
+          return currentSuccessful;
+        });
       }, 1000);
     } else {
       setTimeout(() => {

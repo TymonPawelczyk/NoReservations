@@ -27,19 +27,6 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
     return sequence;
   };
 
-  const startNewRound = () => {
-    const sequenceLength = round + 2; // Start with 3, then 4, 5, etc.
-    const newSequence = generateSequence(sequenceLength);
-    setTargetSequence(newSequence);
-    setPlayerSequence([]);
-    setGameState('memorize');
-    setShowFeedback(null);
-
-    // After 3 seconds, hide the sequence
-    setTimeout(() => {
-      setGameState('playing');
-    }, 2000 + sequenceLength * 500);
-  };
 
   const handleFoodClick = (food: string) => {
     if (gameState !== 'playing') return;
@@ -52,12 +39,15 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
       // Wrong!
       setShowFeedback('wrong');
       setTimeout(() => {
-        if (round < maxRounds) {
-          setRound(round + 1);
-          startNewRound();
-        } else {
-          finishGame();
-        }
+        setRound(prev => {
+          const nextRound = prev + 1;
+          if (nextRound <= maxRounds) {
+            startNewRoundWithNumber(nextRound);
+          } else {
+            finishGame();
+          }
+          return nextRound;
+        });
       }, 1500);
       return;
     }
@@ -67,28 +57,47 @@ export default function PicnicMiniGame({ onComplete }: PicnicMiniGameProps) {
       // Correct!
       setShowFeedback('correct');
       const points = 100;
-      setScore(score + points);
+      setScore(prev => prev + points);
       
       setTimeout(() => {
-        if (round < maxRounds) {
-          setRound(round + 1);
-          startNewRound();
-        } else {
-          finishGame();
-        }
+        setRound(prev => {
+          const nextRound = prev + 1;
+          if (nextRound <= maxRounds) {
+            startNewRoundWithNumber(nextRound);
+          } else {
+            finishGame();
+          }
+          return nextRound;
+        });
       }, 1500);
     }
+  };
+
+  const startNewRoundWithNumber = (roundNum: number) => {
+    const sequenceLength = roundNum + 2;
+    const newSequence = generateSequence(sequenceLength);
+    setTargetSequence(newSequence);
+    setPlayerSequence([]);
+    setGameState('memorize');
+    setShowFeedback(null);
+
+    setTimeout(() => {
+      setGameState('playing');
+    }, 2000 + sequenceLength * 500);
   };
 
   const finishGame = () => {
     setGameState('finished');
     setTimeout(() => {
-      onComplete(Math.round((score / (maxRounds * 100)) * 100));
+      setScore(currentScore => {
+        onComplete(Math.round((currentScore / (maxRounds * 100)) * 100));
+        return currentScore;
+      });
     }, 2000);
   };
 
   const handleStart = () => {
-    startNewRound();
+    startNewRoundWithNumber(1);
   };
 
   if (gameState === 'ready') {
