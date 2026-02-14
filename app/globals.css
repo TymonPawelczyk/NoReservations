@@ -75,3 +75,17 @@ img.pixel-art,
   border-right: 12px solid transparent;
   border-top: 17px solid white;
 }
+
+/* Animate pulse once */
+@keyframes pulse-once {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-once {
+  animation: pulse-once 0.6s ease-in-out;
+}
