@@ -30,7 +30,9 @@ img.pixel-art,
 
 /* Retro button style */
 .retro-button {
-  @apply px-6 py-3 border-4 border-black bg-gradient-to-b from-gray-100 to-gray-300 text-black font-bold uppercase text-sm tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] transition-all;
+  @apply px-4 py-2 sm:px-6 sm:py-3 border-4 border-black bg-gradient-to-b from-gray-100 to-gray-300 text-black font-bold uppercase text-xs sm:text-sm tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] transition-all;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .retro-button:disabled {
@@ -39,7 +41,7 @@ img.pixel-art,
 
 /* Retro input */
 .retro-input {
-  @apply px-4 py-3 border-4 border-black bg-white text-black font-bold text-center text-2xl tracking-widest;
+  @apply px-3 py-2 sm:px-4 sm:py-3 border-4 border-black bg-white text-black font-bold text-center text-lg sm:text-2xl tracking-widest;
 }
 
 /* Speech bubble */
