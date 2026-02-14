@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, missingVars } from '@/lib/firebase';
 import { generateSessionCode, generateUserId } from '@/lib/session';
 import { AvatarKey, AVATAR_DISPLAY_NAMES } from '@/lib/avatars';
 import Avatar from '@/components/Avatar';
@@ -24,6 +24,13 @@ export default function CreateSessionPage() {
     setLoading(true);
     setError('');
 
+    // Check if Firebase is configured
+    if (missingVars.length > 0) {
+      setError(`Brak konfiguracji Firebase! Ustaw zmienne środowiskowe na Vercel.`);
+      setLoading(false);
+      return;
+    }
+
     try {
       const code = generateSessionCode();
       const uid = generateUserId();
@@ -32,21 +39,29 @@ export default function CreateSessionPage() {
       const now = new Date();
       const startAt = new Date(now.getTime() + 60 * 60 * 1000); // +1h
 
-      await setDoc(doc(db, 'sessions', code), {
-        code,
-        createdAt: now.toISOString(),
-        startAt: startAt.toISOString(),
-        stage: 1,
-        stageUnlockedAt: startAt.toISOString(),
-        ready: { [uid]: false },
-        participants: {
-          [uid]: {
-            displayName: displayName.trim(),
-            avatarKey: selectedAvatar,
-            lastSeenAt: now.toISOString(),
+      // Timeout to prevent hanging if Firestore is unreachable
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 15000)
+      );
+
+      await Promise.race([
+        setDoc(doc(db, 'sessions', code), {
+          code,
+          createdAt: now.toISOString(),
+          startAt: startAt.toISOString(),
+          stage: 1,
+          stageUnlockedAt: startAt.toISOString(),
+          ready: { [uid]: false },
+          participants: {
+            [uid]: {
+              displayName: displayName.trim(),
+              avatarKey: selectedAvatar,
+              lastSeenAt: now.toISOString(),
+            },
           },
-        },
-      });
+        }),
+        timeoutPromise,
+      ]);
 
       // Save to localStorage
       localStorage.setItem('sessionCode', code);
@@ -55,7 +70,10 @@ export default function CreateSessionPage() {
       router.push(`/session/${code}`);
     } catch (err) {
       console.error('Error creating session:', err);
-      setError('Błąd tworzenia sesji. Spróbuj ponownie.');
+      const message = err instanceof Error && err.message === 'timeout'
+        ? 'Nie udało się połączyć z bazą danych. Sprawdź konfigurację Firebase na Vercel.'
+        : 'Błąd tworzenia sesji. Spróbuj ponownie.';
+      setError(message);
       setLoading(false);
     }
   };
