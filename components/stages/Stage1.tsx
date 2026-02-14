@@ -275,15 +275,27 @@ export default function Stage1({ code, userId, onComplete }: Stage1Props) {
                 <div key={q.id} className={`border-4 p-3 ${
                   isMatch ? 'border-green-400 bg-green-500/10' : 'border-white/20 bg-white/5'
                 }`}>
-                  <p className="text-white text-sm mb-2 flex items-center gap-2">
+                  <p className="text-white text-sm mb-2 flex items-center gap-2 break-words">
                     {isMatch && '✓'} {q.question}
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className={isMatch ? 'text-green-300 font-bold' : 'text-yellow-400'}>
-                      TY: {q.options.find(o => o.value === myAnswer)?.label}
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-2">
+                      <span className={`text-xs font-semibold shrink-0 ${isMatch ? 'text-green-300' : 'text-yellow-400'}`}>
+                        TY:
+                      </span>
+                      <span className={`text-xs break-words flex-1 ${isMatch ? 'text-green-300 font-bold' : 'text-white'}`}>
+                        {q.options.find(o => o.value === myAnswer)?.label}
+                      </span>
+                      {isMatch && <span className="text-lg shrink-0">✓</span>}
                     </div>
-                    <div className={isMatch ? 'text-green-300 font-bold' : 'text-pink-300'}>
-                      PARTNER: {partnerAnswers && q.options.find(o => o.value === partnerAnswer)?.label}
+                    <div className="flex items-start gap-2">
+                      <span className={`text-xs font-semibold shrink-0 ${isMatch ? 'text-green-300' : 'text-pink-300'}`}>
+                        PARTNER:
+                      </span>
+                      <span className={`text-xs break-words flex-1 ${isMatch ? 'text-green-300 font-bold' : 'text-white'}`}>
+                        {partnerAnswers && q.options.find(o => o.value === partnerAnswer)?.label}
+                      </span>
+                      {!isMatch && <span className="text-lg shrink-0">✗</span>}
                     </div>
                   </div>
                 </div>
