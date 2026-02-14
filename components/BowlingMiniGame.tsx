@@ -97,14 +97,14 @@ export default function BowlingMiniGame({ onComplete }: BowlingMiniGameProps) {
     <div className="min-h-screen p-4 flex items-center justify-center bg-gradient-to-b from-blue-900 to-purple-900">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white mb-2">🎳 Mini Kręgle</h2>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">🎳 Mini Kręgle</h2>
           <p className="text-pink-200 text-sm">Kliknij w zielonej strefie!</p>
         </div>
 
-        <div className="bg-white/10 border-4 border-white/30 p-8">
+        <div className="bg-white/10 border-4 border-white/30 p-4 sm:p-8">
           {gameState === 'ready' && (
             <div className="text-center space-y-6">
-              <p className="text-white text-lg">Naciśnij START i złap pasek w zielonej strefie!</p>
+              <p className="text-white text-sm sm:text-lg">Naciśnij START i złap pasek w zielonej strefie!</p>
               <button onClick={handleStart} className="retro-button">
                 START
               </button>
@@ -172,7 +172,7 @@ export default function BowlingMiniGame({ onComplete }: BowlingMiniGameProps) {
                   }`}>
                     {result}
                   </div>
-                  <p className="text-white text-lg">
+                  <p className="text-white text-sm sm:text-lg">
                     {result === 100 ? '🎉 PERFEKCYJNIE!' :
                      result >= 80 ? '👍 Świetnie!' :
                      result >= 60 ? '😊 Nieźle!' :
