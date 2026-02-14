@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, missingVars } from '@/lib/firebase';
 import { generateUserId } from '@/lib/session';
 import { AvatarKey, AVATAR_DISPLAY_NAMES } from '@/lib/avatars';
 import Avatar from '@/components/Avatar';
@@ -30,9 +30,24 @@ export default function JoinSessionPage() {
     setLoading(true);
     setError('');
 
+    // Check if Firebase is configured
+    if (missingVars.length > 0) {
+      setError(`Brak konfiguracji Firebase! Ustaw zmienne środowiskowe na Vercel.`);
+      setLoading(false);
+      return;
+    }
+
     try {
       const sessionRef = doc(db, 'sessions', code);
-      const sessionSnap = await getDoc(sessionRef);
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 15000)
+      );
+
+      const sessionSnap = await Promise.race([
+        getDoc(sessionRef),
+        timeoutPromise,
+      ]);
 
       if (!sessionSnap.exists()) {
         setError('Sesja o tym kodzie nie istnieje!');
@@ -88,7 +103,10 @@ export default function JoinSessionPage() {
       router.push(`/session/${code}`);
     } catch (err) {
       console.error('Error joining session:', err);
-      setError('Błąd dołączania do sesji. Spróbuj ponownie.');
+      const message = err instanceof Error && err.message === 'timeout'
+        ? 'Nie udało się połączyć z bazą danych. Sprawdź połączenie z internetem.'
+        : 'Błąd dołączania do sesji. Spróbuj ponownie.';
+      setError(message);
       setLoading(false);
     }
   };
