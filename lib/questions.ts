@@ -61,7 +61,7 @@ export const stage1Questions = [
 export const stage2Questions = [
   {
     id: 'q1',
-    question: 'Czego potrzebujesz dziś?',
+    question: 'Czego dziś potrzebujesz?',
     options: [
       { value: 'culture', label: 'Kultury i sztuki', points: { museum: 2, walk: 0, bowling: 0, pool: 0, picnic: 0 } },
       { value: 'fresh_air', label: 'Świeżego powietrza', points: { museum: 0, walk: 2, bowling: 0, pool: 0, picnic: 0 } },
@@ -93,7 +93,7 @@ export const stage2Questions = [
     id: 'q4',
     question: 'Wolisz spędzać czas:',
     options: [
-      { value: 'indoors', label: 'W pomieszczeniach', points: { museum: 1, walk: 0, bowling: 1, pool: 0, picnic: 0 } },
+      { value: 'indoors', label: 'Poza domem', points: { museum: 1, walk: 0, bowling: 1, pool: 0, picnic: 0 } },
       { value: 'home', label: 'W domu', points: { museum: 0, walk: 0, bowling: 0, pool: 0, picnic: 2 } },
       { value: 'outdoors', label: 'Na świeżym powietrzu', points: { museum: 0, walk: 2, bowling: 0, pool: 1, picnic: 0 } },
       { value: 'water', label: 'W wodzie', points: { museum: 0, walk: 0, bowling: 0, pool: 2, picnic: 0 } },
