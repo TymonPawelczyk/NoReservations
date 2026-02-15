@@ -8,7 +8,7 @@ export default function HomePage() {
             <br />
             REZERWACJI
           </h1>
-          <p className="text-sm text-pink-200">Randka dla dwojga 💕</p>
+          <p className="text-sm text-pink-200">Randka dla dwojga</p>
         </div>
 
         <div className="space-y-4 pt-8">
@@ -29,7 +29,7 @@ export default function HomePage() {
 
         <div className="pt-8 text-xs text-pink-300">
           <p>Pixel Dating Experience</p>
-          <p className="mt-2">🎮 v0.1.0</p>
+          <p className="mt-2">v0.1.0</p>
         </div>
       </div>
     </main>
