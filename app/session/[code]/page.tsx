@@ -172,7 +172,7 @@ export default function SessionPage() {
         <div className="grid grid-cols-2 gap-4">
           {/* Current User */}
           <div className="bg-white/10 border-4 border-yellow-400 p-4 text-center">
-            <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={100} animated={true} />
+            <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={100} animated={true} clickable={true} />
             <p className="text-white font-bold mt-2">TY</p>
             <p className="text-pink-200 text-xs">{currentUser?.displayName}</p>
           </div>
@@ -181,7 +181,7 @@ export default function SessionPage() {
           <div className="bg-white/10 border-4 border-white/30 p-4 text-center">
             {partner ? (
               <>
-                <Avatar avatarKey={partner.avatarKey} emotion="happy" size={100} animated={true} />
+                <Avatar avatarKey={partner.avatarKey} emotion="happy" size={100} animated={true} clickable={true} />
                 <p className="text-white font-bold mt-2">PARTNER</p>
                 <p className="text-pink-200 text-xs">{partner.displayName}</p>
               </>
