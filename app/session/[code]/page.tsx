@@ -10,6 +10,7 @@ import Stage1 from '@/components/stages/Stage1';
 import Stage2 from '@/components/stages/Stage2';
 import Stage3 from '@/components/stages/Stage3';
 import ConfirmExitModal from '@/components/ConfirmExitModal';
+import EndGameAnimation from '@/components/EndGameAnimation';
 
 export default function SessionPage() {
   const params = useParams();
@@ -21,6 +22,8 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true);
   const [currentStageView, setCurrentStageView] = useState<number | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showEndGameAnimation, setShowEndGameAnimation] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
   const advancingStageRef = useRef(false);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function SessionPage() {
     return () => unsubscribe();
   }, [code, router]);
 
-  // Check if both users are ready and advance to next stage
+  // Check if both users are ready and advance to next stage or show end game
   useEffect(() => {
     if (!session || !userId) return;
 
@@ -56,6 +59,12 @@ export default function SessionPage() {
 
     // Check if both users are ready (2 users, both true)
     if (userIds.length === 2 && userIds.every(uid => ready[uid] === true)) {
+      // If we're at stage 3 and both are ready, show end game animation
+      if (session.stage === 3 && !gameCompleted && !showEndGameAnimation) {
+        setShowEndGameAnimation(true);
+        return;
+      }
+
       // Prevent multiple simultaneous advances
       if (advancingStageRef.current) return;
       advancingStageRef.current = true;
@@ -94,7 +103,7 @@ export default function SessionPage() {
       // Reset flag when not both ready
       advancingStageRef.current = false;
     }
-  }, [session, userId, code]);
+  }, [session, userId, code, gameCompleted, showEndGameAnimation]);
 
   const handleReady = async () => {
     if (!userId) return;
@@ -126,6 +135,11 @@ export default function SessionPage() {
     setShowExitConfirm(false);
   };
 
+  const handleAnimationComplete = () => {
+    setShowEndGameAnimation(false);
+    setGameCompleted(true);
+  };
+
   if (loading || !session || !userId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -143,6 +157,19 @@ export default function SessionPage() {
   const partner = participants.find(([uid]) => uid !== userId)?.[1];
   const isWaitingForPartner = participants.length < 2;
 
+  // Show end game animation
+  if (showEndGameAnimation && currentUser && partner) {
+    return (
+      <EndGameAnimation
+        player1Avatar={currentUser.avatarKey}
+        player2Avatar={partner.avatarKey}
+        player1Name={currentUser.displayName}
+        player2Name={partner.displayName}
+        onComplete={handleAnimationComplete}
+      />
+    );
+  }
+
   // Stage rendering
   if (currentStageView !== null) {
     switch (currentStageView) {
@@ -153,6 +180,90 @@ export default function SessionPage() {
       case 3:
         return <Stage3 code={code} userId={userId} onComplete={() => setCurrentStageView(null)} />;
     }
+  }
+
+  // Game completed view
+  if (gameCompleted && session.stage === 3) {
+    return (
+      <main className="min-h-screen p-4 pb-20">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="text-center bg-gradient-to-b from-yellow-500/30 to-pink-500/30 border-4 border-yellow-400 p-6">
+            <div className="text-6xl mb-4">🎉</div>
+            <h1 className="text-white text-2xl sm:text-3xl font-bold mb-2">
+              Gratulacje!
+            </h1>
+            <p className="text-pink-200 text-sm">
+              Ukończyliście wszystkie etapy randki!
+            </p>
+          </div>
+
+          {/* Participants */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white/10 border-4 border-pink-400 p-4 text-center">
+              <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={120} animated={true} flipHorizontal={true} />
+              <p className="text-white font-bold mt-2">{currentUser?.displayName}</p>
+            </div>
+            <div className="bg-white/10 border-4 border-pink-400 p-4 text-center">
+              <Avatar avatarKey={partner?.avatarKey || 'paula'} emotion="happy" size={120} animated={true} />
+              <p className="text-white font-bold mt-2">{partner?.displayName}</p>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="bg-white/10 border-4 border-white/30 p-6 space-y-4">
+            <h3 className="text-white text-xl font-bold text-center mb-4">
+              🌟 Podsumowanie waszej randki 🌟
+            </h3>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 text-green-300">
+                <span className="text-2xl">✓</span>
+                <span className="text-sm">Etap 1: Jedzenie - ukończony</span>
+              </div>
+              <div className="flex items-center gap-3 text-green-300">
+                <span className="text-2xl">✓</span>
+                <span className="text-sm">Etap 2: Co robimy? - ukończony</span>
+              </div>
+              <div className="flex items-center gap-3 text-green-300">
+                <span className="text-2xl">✓</span>
+                <span className="text-sm">Etap 3: Nagrody - ukończony</span>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t-2 border-white/20">
+              <p className="text-pink-200 text-xs text-center leading-relaxed">
+                To był dopiero początek! Miejmy nadzieję, że wasza wspólna przygoda będzie kontynuowana w prawdziwym życiu. 💕
+              </p>
+            </div>
+          </div>
+
+          {/* Code for reference */}
+          <div className="text-center bg-white/10 border-4 border-white/30 p-4">
+            <p className="text-white text-xs mb-2">Kod waszej sesji:</p>
+            <div className="text-xl font-bold text-yellow-400 tracking-widest">{code}</div>
+          </div>
+
+          {/* Exit Button */}
+          <div className="mt-8 pt-4 border-t-2 border-white/20">
+            <button
+              onClick={handleExitClick}
+              className="text-red-300 hover:text-red-400 text-sm w-full text-center transition-colors"
+            >
+              🚪 Wyjdź z sesji
+            </button>
+          </div>
+        </div>
+
+        {/* Exit Confirmation Modal */}
+        {showExitConfirm && (
+          <ConfirmExitModal
+            onConfirm={handleExitSession}
+            onCancel={handleCancelExit}
+          />
+        )}
+      </main>
+    );
   }
 
   // Main stage map view
@@ -172,7 +283,7 @@ export default function SessionPage() {
         <div className="grid grid-cols-2 gap-4">
           {/* Current User */}
           <div className="bg-white/10 border-4 border-yellow-400 p-4 text-center">
-            <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={100} animated={true} clickable={true} />
+            <Avatar avatarKey={currentUser?.avatarKey || 'tymon'} emotion="happy" size={100} animated={true} clickable={true} flipHorizontal={true} />
             <p className="text-white font-bold mt-2">TY</p>
             <p className="text-pink-200 text-xs">{currentUser?.displayName}</p>
           </div>
