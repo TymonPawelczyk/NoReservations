@@ -11,6 +11,7 @@ interface AvatarProps {
   className?: string;
   animated?: boolean;
   clickable?: boolean;
+  flipHorizontal?: boolean;
 }
 
 export default function Avatar({
@@ -19,7 +20,8 @@ export default function Avatar({
   size = 120,
   className = '',
   animated = false,
-  clickable = false
+  clickable = false,
+  flipHorizontal = false
 }: AvatarProps) {
   const [currentEmotion, setCurrentEmotion] = useState<AvatarEmotion>(emotion);
   const surpriseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,7 +87,7 @@ export default function Avatar({
         alt={`Avatar ${avatarKey}`}
         width={size}
         height={size}
-        className="pixel-art object-contain"
+        className={`pixel-art object-contain ${flipHorizontal ? 'scale-x-[-1]' : ''}`}
         unoptimized
       />
     </div>
