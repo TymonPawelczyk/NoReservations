@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BEZ REZERWACJI",
-  description: "Appka randkowa dla dwojga 💕",
+  description: "Appka randkowa dla dwojga",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
